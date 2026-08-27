@@ -1,0 +1,6 @@
+@GeneralAdmin.Backend_HostAddress = http://localhost:5161
+
+GET {{GeneralAdmin.Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
