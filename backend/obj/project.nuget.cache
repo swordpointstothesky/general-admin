@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "3Al7FmvD9yY=",
+  "dgSpecHash": "flhXhrggi50=",
   "success": true,
   "projectFilePath": "D:\\project\\general-admin\\backend\\GeneralAdmin.Backend.csproj",
   "expectedPackageFiles": [
@@ -21,6 +21,7 @@
     "C:\\Users\\rml\\.nuget\\packages\\microsoft.entityframeworkcore.analyzers\\10.0.11\\microsoft.entityframeworkcore.analyzers.10.0.11.nupkg.sha512",
     "C:\\Users\\rml\\.nuget\\packages\\microsoft.entityframeworkcore.design\\10.0.11\\microsoft.entityframeworkcore.design.10.0.11.nupkg.sha512",
     "C:\\Users\\rml\\.nuget\\packages\\microsoft.entityframeworkcore.relational\\10.0.11\\microsoft.entityframeworkcore.relational.10.0.11.nupkg.sha512",
+    "C:\\Users\\rml\\.nuget\\packages\\microsoft.extensions.configuration.json\\10.0.11\\microsoft.extensions.configuration.json.10.0.11.nupkg.sha512",
     "C:\\Users\\rml\\.nuget\\packages\\microsoft.extensions.dependencymodel\\10.0.11\\microsoft.extensions.dependencymodel.10.0.11.nupkg.sha512",
     "C:\\Users\\rml\\.nuget\\packages\\microsoft.identitymodel.abstractions\\8.22.0\\microsoft.identitymodel.abstractions.8.22.0.nupkg.sha512",
     "C:\\Users\\rml\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\8.22.0\\microsoft.identitymodel.jsonwebtokens.8.22.0.nupkg.sha512",
@@ -46,5 +47,18 @@
     "C:\\Users\\rml\\.nuget\\packages\\system.composition.typedparts\\9.0.0\\system.composition.typedparts.9.0.0.nupkg.sha512",
     "C:\\Users\\rml\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.22.0\\system.identitymodel.tokens.jwt.8.22.0.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1510",
+      "level": "Warning",
+      "message": "PackageReference Microsoft.Extensions.Configuration.Json 将不会被裁剪。此包自动可用，无需显式引用。移除 PackageReference 项。",
+      "projectPath": "D:\\project\\general-admin\\backend\\GeneralAdmin.Backend.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\project\\general-admin\\backend\\GeneralAdmin.Backend.csproj",
+      "libraryId": "Microsoft.Extensions.Configuration.Json",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
 }
