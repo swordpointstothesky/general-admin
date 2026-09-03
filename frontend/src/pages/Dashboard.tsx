@@ -109,7 +109,6 @@ export default function Dashboard() {
 
     const getWeeklyData = () => {
         const dayLabels = getLast7Days();
-        const today = new Date().toDateString();
         // 模拟数据：按天统计注册用户数
         const counts = dayLabels.map((_, index) => {
             const date = new Date();
