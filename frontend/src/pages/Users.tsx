@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '@/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -86,7 +86,7 @@ export default function Users() {
         setError('');
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get('/api/users', {
+            const response = await api.get('/api/users', {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setUsers(response.data);
@@ -142,7 +142,7 @@ export default function Users() {
                 if (formData.password) {
                     updateData.password = formData.password;
                 }
-                await axios.put(`/api/users/${editingUser.id}`, updateData, {
+                await api.put(`/api/users/${editingUser.id}`, updateData, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
             } else {
@@ -153,7 +153,7 @@ export default function Users() {
                     email: formData.email || undefined,
                     isActive: formData.isActive,
                 };
-                await axios.post('/api/users', createData, {
+                await api.post('/api/users', createData, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
             }
@@ -178,7 +178,7 @@ export default function Users() {
         setDeleting(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.delete(`/api/users/${deletingUser.id}`, {
+            await api.delete(`/api/users/${deletingUser.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setDeleteDialogOpen(false);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '@/api';
 import {
     Card,
     CardContent,
@@ -64,7 +64,7 @@ export default function Dashboard() {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get('/api/users', {
+            const response = await api.get('/api/users', {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const userData = response.data;
