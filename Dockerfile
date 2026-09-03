@@ -15,7 +15,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/out .
 
-# Render 平台要求应用监听 8080 端口[reference:10][reference:11]
+# Railway 平台要求应用监听 8080 端口
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
