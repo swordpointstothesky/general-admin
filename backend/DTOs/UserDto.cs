@@ -7,6 +7,7 @@ public class UserDto
     public string? Email { get; set; }
     public DateTime CreateTime { get; set; }
     public bool IsActive { get; set; }
+    public List<RoleDto> Roles { get; set; } = new();
 }
 
 public class CreateUserRequest
@@ -15,6 +16,7 @@ public class CreateUserRequest
     public string Password { get; set; } = string.Empty;
     public string? Email { get; set; }
     public bool? IsActive { get; set; }
+    public List<int> RoleIds { get; set; } = new();
 }
 
 public class UpdateUserRequest
@@ -23,4 +25,5 @@ public class UpdateUserRequest
     public string? Password { get; set; }
     public string? Email { get; set; }
     public bool? IsActive { get; set; }
+    public List<int> RoleIds { get; set; } = new();
 }

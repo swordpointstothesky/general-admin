@@ -102,4 +102,44 @@ public class UserService : IUserService
         await _context.SaveChangesAsync();
         return true;
     }
+
+    public async Task<bool> AssignRolesAsync(int userId, List<int> roleIds)
+    {
+        var user = await _context.Users
+            .Include(u => u.UserRoles)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null) return false;
+
+        // 删除旧关联
+        _context.UserRoles.RemoveRange(user.UserRoles);
+
+        // 添加新关联
+        foreach (var roleId in roleIds)
+        {
+            _context.UserRoles.Add(new UserRole
+            {
+                UserId = userId,
+                RoleId = roleId
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<List<RoleDto>> GetUserRolesAsync(int userId)
+    {
+        var roles = await _context.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => new RoleDto
+            {
+                Id = ur.Role.Id,
+                Name = ur.Role.Name,
+                Description = ur.Role.Description
+            })
+            .ToListAsync();
+
+        return roles;
+    }
 }

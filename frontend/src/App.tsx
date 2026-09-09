@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import Roles from './pages/Roles';
+import Layout from './components/Layout';
 
 // 简单的路由守卫：检查是否有 token
 function PrivateRoute({ children }: { children: ReactNode }) {
@@ -16,22 +18,40 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
-          path="/dashboard"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <Layout />
             </PrivateRoute>
           }
-        />
+        >
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/users"
-          element={
-            <PrivateRoute>
-              <Users />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/users"
+            element={
+              <PrivateRoute>
+                <Users />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/roles"
+            element={
+              <PrivateRoute>
+                <Roles />
+              </PrivateRoute>
+            }
+          />
+        </Route>
+
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

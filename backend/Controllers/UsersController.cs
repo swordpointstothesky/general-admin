@@ -61,4 +61,22 @@ public class UsersController : ControllerBase
         if (!result) return NotFound();
         return NoContent();
     }
+
+    // 添加：为用户分配角色
+    [HttpPost("{id}/roles")]
+    public async Task<IActionResult> AssignRoles(int id, [FromBody] AssignRoleRequest request)
+    {
+        var result = await _userService.AssignRolesAsync(id, request.RoleIds);
+        if (!result) return NotFound();
+        return NoContent();
+    }
+
+    // 添加：获取用户角色
+    [HttpGet("{id}/roles")]
+    public async Task<IActionResult> GetUserRoles(int id)
+    {
+        var roles = await _userService.GetUserRolesAsync(id);
+        if (roles == null) return NotFound();
+        return Ok(roles);
+    }
 }

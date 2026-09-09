@@ -13,5 +13,8 @@ namespace GeneralAdmin.Backend.Models
         public string? Email { get; set; }
         public DateTime CreateTime { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
+
+        // 多对多：一个用户可以有多个角色
+        public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     }
 }

@@ -9,5 +9,7 @@ namespace GeneralAdmin.Backend.Services
         Task<UserDto> CreateUserAsync(CreateUserRequest request);
         Task<bool> UpdateUserAsync(int id, UpdateUserRequest request);
         Task<bool> DeleteUserAsync(int id);
+        Task<bool> AssignRolesAsync(int userId, List<int> roleIds);
+        Task<List<RoleDto>> GetUserRolesAsync(int userId);
     }
 }

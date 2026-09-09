@@ -2,6 +2,7 @@ using GeneralAdmin.Backend.Data;
 using GeneralAdmin.Backend.Models;
 using GeneralAdmin.Backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -9,7 +10,13 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Permission", policy =>
+        policy.Requirements.Add(new PermissionRequirement("")));
+});
 
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -31,6 +38,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IMenuService, MenuService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
