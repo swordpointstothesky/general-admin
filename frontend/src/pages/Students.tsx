@@ -273,9 +273,9 @@ export default function Students() {
     };
 
     // ========== 导出当前页 ==========
-    const handleExportCurrentPage = () => {
-        exportToExcel(pagedData, exportColumns, '学生列表_当前页', '学生');
-    };
+    // const handleExportCurrentPage = () => {
+    //     exportToExcel(pagedData, exportColumns, '学生列表_当前页', '学生');
+    // };
 
     // ========== 导出全部（筛选后） ==========
     const handleExportAll = () => {
@@ -307,10 +307,8 @@ export default function Students() {
                     <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">性别</Label>
                         <Select
-                            value={filters.gender || 'all'}
-                            onValueChange={(value) =>
-                                setFilters({ ...filters, gender: value === 'all' ? '' : value })
-                            }
+                            value={filters.gender || ''}   // ← 加 || ''
+                            onValueChange={(value) => setFilters({ ...filters, gender: value ?? '' })}
                         >
                             <SelectTrigger className="w-32 h-9">
                                 <SelectValue placeholder="全部" />

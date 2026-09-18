@@ -12,7 +12,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Loader2, User, Mail, Calendar, Shield, KeyRound } from 'lucide-react';
 
 interface Profile {

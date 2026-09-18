@@ -21,7 +21,7 @@ function PrivateRoute({ children }: { children: ReactNode }) {
 function App() {
     return (
         <ThemeProvider>
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider>
                 <PermissionProvider>
                     <BrowserRouter>
                         <Routes>

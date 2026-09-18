@@ -85,7 +85,7 @@ export default function Generator() {
                     <CardTitle className="text-base">1. 选择数据表</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Select value={selectedTable} onValueChange={handleSelectTable}>
+                    <Select value={selectedTable} onValueChange={(value) => value && handleSelectTable(value)}>
                         <SelectTrigger>
                             <SelectValue placeholder="选择要生成的数据表" />
                         </SelectTrigger>

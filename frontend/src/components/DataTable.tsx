@@ -110,7 +110,6 @@ export function DataTable<T extends Record<string, any>>({
     // ========== 多选逻辑 ==========
     const allKeys = data.map((r, i) => getRowKey(r, i));
     const allSelected = allKeys.length > 0 && allKeys.every((k) => selectedKeys.includes(k));
-    const someSelected = allKeys.some((k) => selectedKeys.includes(k)) && !allSelected;
 
     const handleSelectAll = (checked: boolean) => {
         if (!onSelectionChange) return;
@@ -244,7 +243,7 @@ export function DataTable<T extends Record<string, any>>({
                             {selectable && (
                                 <TableHead className="w-12">
                                     <Checkbox
-                                        checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                                        checked={allSelected}
                                         onCheckedChange={(v) => handleSelectAll(!!v)}
                                     />
                                 </TableHead>
