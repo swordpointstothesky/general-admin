@@ -62,13 +62,29 @@ public class UserService : IUserService
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
+        // ✅ 新增：保存用户与角色的关联
+        if (request.RoleIds != null && request.RoleIds.Any())
+        {
+            foreach (var roleId in request.RoleIds)
+            {
+                _context.UserRoles.Add(new UserRole
+                {
+                    UserId = user.Id,
+                    RoleId = roleId
+                });
+            }
+            await _context.SaveChangesAsync();
+        }
+
+        // ✅ 返回时带上角色信息
         return new UserDto
         {
             Id = user.Id,
             Username = user.Username,
             Email = user.Email,
             CreateTime = user.CreateTime,
-            IsActive = user.IsActive
+            IsActive = user.IsActive,
+            Roles = await GetUserRolesAsync(user.Id)
         };
     }
 
@@ -88,6 +104,21 @@ public class UserService : IUserService
 
         if (request.IsActive.HasValue)
             user.IsActive = request.IsActive.Value;
+
+        // ✅ 更新角色关联（先删后加）
+        if (request.RoleIds != null)
+        {
+            _context.UserRoles.RemoveRange(user.UserRoles);
+
+            foreach (var roleId in request.RoleIds)
+            {
+                _context.UserRoles.Add(new UserRole
+                {
+                    UserId = id,
+                    RoleId = roleId
+                });
+            }
+        }
 
         await _context.SaveChangesAsync();
         return true;

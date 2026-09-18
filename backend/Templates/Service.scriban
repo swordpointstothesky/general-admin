@@ -1,0 +1,85 @@
+using GeneralAdmin.Backend.Data;
+using GeneralAdmin.Backend.DTOs;
+using GeneralAdmin.Backend.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace GeneralAdmin.Backend.Services;
+
+public class {{ ModuleName }}Service : I{{ ModuleName }}Service
+{
+    private readonly AppDbContext _context;
+
+    public {{ ModuleName }}Service(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<List<{{ ModuleName }}Dto>> GetAllAsync()
+    {
+        return await _context.{{ ModuleName }}s
+            .Select(x => new {{ ModuleName }}Dto
+            {
+{{~ for col in Columns ~}}
+                {{ col.ColumnName }} = x.{{ col.ColumnName }},
+{{~ end ~}}
+            })
+            .ToListAsync();
+    }
+
+    public async Task<{{ ModuleName }}Dto?> GetByIdAsync({{ PkType }} id)
+    {
+        var entity = await _context.{{ ModuleName }}s.FindAsync(id);
+        if (entity == null) return null;
+
+        return new {{ ModuleName }}Dto
+        {
+{{~ for col in Columns ~}}
+            {{ col.ColumnName }} = entity.{{ col.ColumnName }},
+{{~ end ~}}
+        };
+    }
+
+    public async Task<{{ ModuleName }}Dto> CreateAsync(Create{{ ModuleName }}Request request)
+    {
+        var entity = new {{ ModuleName }}
+        {
+{{~ for col in FormColumns ~}}
+            {{ col.ColumnName }} = request.{{ col.ColumnName }},
+{{~ end ~}}
+        };
+
+        _context.{{ ModuleName }}s.Add(entity);
+        await _context.SaveChangesAsync();
+
+        return await GetByIdAsync(entity.{{ PkName }}) ?? throw new InvalidOperationException("创建失败");
+    }
+
+    public async Task<bool> UpdateAsync({{ PkType }} id, Update{{ ModuleName }}Request request)
+    {
+        var entity = await _context.{{ ModuleName }}s.FindAsync(id);
+        if (entity == null) return false;
+
+{{~ for col in FormColumns ~}}
+{{~ if col.CSharpType == "string" || col.CSharpType == "string?" ~}}
+        if (!string.IsNullOrEmpty(request.{{ col.ColumnName }}))
+            entity.{{ col.ColumnName }} = request.{{ col.ColumnName }};
+{{~ else ~}}
+        if (request.{{ col.ColumnName }}.HasValue)
+            entity.{{ col.ColumnName }} = request.{{ col.ColumnName }}.Value;
+{{~ end ~}}
+{{~ end ~}}
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> DeleteAsync({{ PkType }} id)
+    {
+        var entity = await _context.{{ ModuleName }}s.FindAsync(id);
+        if (entity == null) return false;
+
+        _context.{{ ModuleName }}s.Remove(entity);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+}

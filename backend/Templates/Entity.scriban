@@ -1,0 +1,16 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace GeneralAdmin.Backend.Models;
+
+/// <summary>
+/// {{ DisplayName }}
+/// </summary>
+public class {{ ModuleName }}
+{
+{{~ for col in Columns ~}}
+    /// <summary>
+    /// {{ col.DisplayName }}
+    /// </summary>
+    public {{ col.CSharpType }} {{ col.ColumnName }} { get; set; }{{ if col.CSharpType == "string" || col.CSharpType == "string?" }} = string.Empty;{{ end }}
+{{~ end ~}}
+}

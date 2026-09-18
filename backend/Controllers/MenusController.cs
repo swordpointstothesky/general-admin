@@ -29,4 +29,11 @@ public class MenusController : ControllerBase
         var menus = await _menuService.GetMenusByUserAsync(userId);
         return Ok(menus);
     }
+
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllMenus()
+    {
+        var menus = await _menuService.GetAllMenusAsync();
+        return Ok(menus);
+    }
 }

@@ -25,6 +25,8 @@ export default function Login() {
                 password,
             });
             localStorage.setItem('token', response.data.token);
+            // 触发权限更新事件
+            window.dispatchEvent(new Event('permissions-update'));
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.message || '用户名或密码错误');

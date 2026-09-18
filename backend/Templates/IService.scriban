@@ -1,0 +1,12 @@
+using GeneralAdmin.Backend.DTOs;
+
+namespace GeneralAdmin.Backend.Services;
+
+public interface I{{ ModuleName }}Service
+{
+    Task<List<{{ ModuleName }}Dto>> GetAllAsync();
+    Task<{{ ModuleName }}Dto?> GetByIdAsync({{ PkType }} id);
+    Task<{{ ModuleName }}Dto> CreateAsync(Create{{ ModuleName }}Request request);
+    Task<bool> UpdateAsync({{ PkType }} id, Update{{ ModuleName }}Request request);
+    Task<bool> DeleteAsync({{ PkType }} id);
+}

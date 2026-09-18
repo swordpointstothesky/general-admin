@@ -3,6 +3,7 @@ import api from '@/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MenuTree } from '@/components/MenuTree';
 import {
     Table,
     TableBody,
@@ -35,6 +36,7 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pencil, Trash2, Plus, Loader2 } from 'lucide-react';
+import { usePermission } from '@/contexts/PermissionContext';
 
 // ========== 类型定义 ==========
 interface Permission {
@@ -53,12 +55,25 @@ interface Role {
     permissions: Permission[];
 }
 
+interface MenuItem {
+    id: number;
+    parentId: number | null;
+    name: string;
+    path: string;
+    icon: string | null;
+    children: MenuItem[];
+}
+
 // ========== 主组件 ==========
 export default function Roles() {
     const [roles, setRoles] = useState<Role[]>([]);
     const [permissions, setPermissions] = useState<Permission[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const { hasPermission } = usePermission();
+    // 菜单状态
+    const [allMenus, setAllMenus] = useState<MenuItem[]>([]);
+    const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
 
     // 弹窗状态
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -82,16 +97,19 @@ export default function Roles() {
         try {
             const token = localStorage.getItem('token');
 
-            const [rolesRes, permsRes] = await Promise.all([
+            const [rolesRes, permsRes, menusRes] = await Promise.all([
                 api.get('/api/roles', { headers: { Authorization: `Bearer ${token}` } }),
                 api.get('/api/roles/permissions', { headers: { Authorization: `Bearer ${token}` } }),
+                api.get('/api/menus/all', { headers: { Authorization: `Bearer ${token}` } }),
             ]);
 
             const roleList = Array.isArray(rolesRes.data) ? rolesRes.data : [];
             const permissionList = Array.isArray(permsRes.data) ? permsRes.data : [];
+            const menuList = Array.isArray(menusRes.data) ? menusRes.data : [];
 
             setRoles(roleList);
             setPermissions(permissionList);
+            setAllMenus(menuList);  // ✅ 关键：把菜单数据设置进去
         } catch (err: any) {
             setError(err.response?.data?.message || '获取数据失败');
         } finally {
@@ -107,17 +125,28 @@ export default function Roles() {
     const handleOpenCreate = () => {
         setEditingRole(null);
         setFormData({ name: '', description: '', permissionIds: [] });
+        setSelectedMenuIds([]);
         setDialogOpen(true);
     };
 
     // ========== 打开编辑弹窗 ==========
-    const handleOpenEdit = (role: Role) => {
+    const handleOpenEdit = async (role: Role) => {
         setEditingRole(role);
         setFormData({
             name: role.name,
             description: role.description || '',
-            permissionIds: Array.isArray(role.permissions) ? role.permissions.map(p => p.id) : [],
+            permissionIds: role.permissions.map(p => p.id),
         });
+
+        // 获取角色已分配的菜单
+        try {
+            const response = await api.get(`/api/roles/${role.id}/menus`);
+            setSelectedMenuIds(response.data);
+        } catch (error) {
+            console.error('获取角色菜单失败:', error);
+            setSelectedMenuIds([]);
+        }
+
         setDialogOpen(true);
     };
 
@@ -125,16 +154,21 @@ export default function Roles() {
     const handleSave = async () => {
         setSubmitting(true);
         try {
-            const token = localStorage.getItem('token');
+            let roleId: number;
+
             if (editingRole) {
-                await api.put(`/api/roles/${editingRole.id}`, formData, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                await api.put(`/api/roles/${editingRole.id}`, formData);
+                roleId = editingRole.id;
             } else {
-                await api.post('/api/roles', formData, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const response = await api.post('/api/roles', formData);
+                roleId = response.data.id;
             }
+
+            // 保存菜单分配
+            await api.post(`/api/roles/${roleId}/menus`, {
+                menuIds: selectedMenuIds,
+            });
+
             setDialogOpen(false);
             fetchRoles();
         } catch (err: any) {
@@ -143,7 +177,6 @@ export default function Roles() {
             setSubmitting(false);
         }
     };
-
     // ========== 删除 ==========
     const handleOpenDelete = (role: Role) => {
         setDeletingRole(role);
@@ -155,8 +188,8 @@ export default function Roles() {
         setDeleting(true);
         try {
             const token = localStorage.getItem('token');
-            
-            
+
+
             await api.delete(`/api/roles/${deletingRole.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -205,10 +238,15 @@ export default function Roles() {
                     <h1 className="text-2xl font-bold text-gray-800">角色管理</h1>
                     <p className="text-sm text-gray-500 mt-1">管理系统角色与权限分配</p>
                 </div>
-                <Button onClick={handleOpenCreate}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    新增角色
-                </Button>
+                {/* ✅ 只有 role:create 权限才显示 */}
+                {hasPermission('role:create') && (
+                    <Button
+                        onClick={handleOpenCreate}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        新增角色
+                    </Button>
+                )}
             </div>
 
             {/* 错误提示 */}
@@ -251,31 +289,38 @@ export default function Roles() {
                                     </TableCell>
                                     <TableCell>
                                         <span
-                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                role.isActive
-                                                    ? 'bg-primary/10 text-primary'
-                                                    : 'bg-muted text-muted-foreground'
-                                            }`}
+                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${role.isActive
+                                                ? 'bg-primary/10 text-primary'
+                                                : 'bg-muted text-muted-foreground'
+                                                }`}
                                         >
                                             {role.isActive ? '启用' : '禁用'}
                                         </span>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleOpenEdit(role)}
-                                        >
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleOpenDelete(role)}
-                                            disabled={role.name === 'Admin'}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {/* ✅ 只有 role:edit 权限才显示编辑按钮 */}
+                                        {hasPermission('role:edit') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleOpenEdit(role)}
+                                                className="text-gray-500 hover:text-emerald-600"
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                        {/* ✅ 只有 role:delete 权限才显示删除按钮 */}
+                                        {hasPermission('role:delete') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleOpenDelete(role)}
+                                                className="text-gray-500 hover:text-red-600"
+                                                disabled={role.name === 'Admin'}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -343,6 +388,22 @@ export default function Roles() {
                             </Card>
                             <div className="text-xs text-gray-400">
                                 已选 {formData.permissionIds.length} 个权限
+                            </div>
+                        </div>
+                        {/* 菜单分配 */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-medium">菜单分配</Label>
+                                <span className="text-xs text-muted-foreground">
+                                    已选 {selectedMenuIds.length} 个菜单
+                                </span>
+                            </div>
+                            <div className="border rounded-lg p-4 bg-muted/30">
+                                <MenuTree
+                                    menus={allMenus}
+                                    selectedIds={selectedMenuIds}
+                                    onChange={setSelectedMenuIds}
+                                />
                             </div>
                         </div>
                     </div>

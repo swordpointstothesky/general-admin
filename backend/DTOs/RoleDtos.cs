@@ -37,3 +37,8 @@ public class AssignRoleRequest
 {
     public List<int> RoleIds { get; set; } = new();
 }
+
+public class AssignMenuRequest
+{
+    public List<int> MenuIds { get; set; } = new();
+}

@@ -32,6 +32,8 @@ import {
 import { Pencil, Trash2, Plus, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { usePermission } from '@/contexts/PermissionContext';
+
 
 // ========== 类型定义 ==========
 interface User {
@@ -68,6 +70,7 @@ export default function Users() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const { hasPermission } = usePermission();
 
     // 搜索状态
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -244,10 +247,17 @@ export default function Users() {
                         <h1 className="text-2xl font-bold text-gray-800">用户管理</h1>
                         <p className="text-sm text-gray-500 mt-1">管理系统中的所有用户</p>
                     </div>
-                    <Button onClick={handleOpenCreate}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        新增用户
-                    </Button>
+
+                    {/* ✅ 只有 user:create 权限才显示 */}
+                    {hasPermission('user:create') && (
+                        <Button
+                            onClick={handleOpenCreate}
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            新增用户
+                        </Button>
+                    )}
+
                 </div>
 
                 {/* 搜索框 */}
@@ -306,22 +316,29 @@ export default function Users() {
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleOpenEdit(user)}
-                                                    className="text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleOpenDelete(user)}
-                                                    className="text-gray-500 hover:text-red-600 hover:bg-red-50"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                {/* ✅ 只有 user:edit 权限才显示编辑按钮 */}
+                                                {hasPermission('user:edit') && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleOpenEdit(user)}
+                                                        className="text-gray-500 hover:text-emerald-600"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                {/* ✅ 只有 user:delete 权限才显示删除按钮 */}
+                                                {hasPermission('user:delete') && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleOpenDelete(user)}
+                                                        className="text-gray-500 hover:text-red-600"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+
                                             </TableCell>
                                         </TableRow>
                                     ))

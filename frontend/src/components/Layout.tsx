@@ -1,19 +1,34 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import api from '@/api';
 import {
-    ChevronLeft,
-    ChevronRight,
-    LogOut,
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarInset,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
+} from '@/components/ui/sidebar';
+import {
     LayoutDashboard,
     Users,
     Shield,
-    // ... 添加其他图标
+    FileText,
+    LogOut,
+    User as UserIcon,
+    Code,
 } from 'lucide-react';
-import api from '@/api';
+import { Header } from './layout/Header';
+import { TabBar } from './layout/TabBar';
+import type { TabItem } from './layout/TabBar';
 
-// ========== 菜单项类型 ==========
+// ========== 菜单类型 ==========
 interface MenuItem {
     id: number;
     parentId: number | null;
@@ -23,63 +38,47 @@ interface MenuItem {
     children: MenuItem[];
 }
 
-// ========== 图标映射 ==========
 const iconMap: Record<string, any> = {
     LayoutDashboard,
     Users,
     Shield,
-    // 添加更多图标映射...
+    FileText,
+    User: UserIcon,
+    Code,
 };
 
-// ========== 递归渲染菜单 ==========
-function MenuItem({ item, collapsed }: { item: MenuItem; collapsed: boolean }) {
-    const location = useLocation();
-    const hasChildren = item.children && item.children.length > 0;
-    const Icon = item.icon ? iconMap[item.icon] : null;
-    const isActive = location.pathname === item.path;
+const TABS_STORAGE_KEY = 'open-tabs';
 
-    if (!hasChildren) {
-        return (
-            <Link to={item.path}>
-                <div
-                    className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer",
-                        isActive
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
-                        collapsed && "justify-center px-2"
-                    )}
-                >
-                    {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
-                    {!collapsed && <span className="text-sm">{item.name}</span>}
-                </div>
-            </Link>
-        );
+// ========== 从 JWT 中解析用户信息 ==========
+function parseUserFromToken() {
+    const token = localStorage.getItem('token');
+    if (!token) return { username: '', roles: [] };
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const username =
+            payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || '';
+        const roleRaw =
+            payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+        const roles = Array.isArray(roleRaw) ? roleRaw : roleRaw ? [roleRaw] : [];
+        return { username, roles };
+    } catch {
+        return { username: '', roles: [] };
     }
-
-    // 有子菜单（递归）
-    return (
-        <div className="space-y-1">
-            <div className="flex items-center gap-3 px-3 py-2 text-gray-600">
-                {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
-                {!collapsed && <span className="text-sm font-medium">{item.name}</span>}
-            </div>
-            <div className="ml-4 space-y-1">
-                {item.children.map((child) => (
-                    <MenuItem key={child.id} item={child} collapsed={collapsed} />
-                ))}
-            </div>
-        </div>
-    );
 }
 
-// ========== 主布局组件 ==========
+// ========== 主布局 ==========
 export default function Layout() {
-    const [collapsed, setCollapsed] = useState(false);
     const [menus, setMenus] = useState<MenuItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [tabs, setTabs] = useState<TabItem[]>(() => {
+        const saved = localStorage.getItem(TABS_STORAGE_KEY);
+        return saved ? JSON.parse(saved) : [];
+    });
+    const location = useLocation();
+    const navigate = useNavigate();
+    const userInfo = parseUserFromToken();
 
-    // 获取菜单数据
+    // 获取菜单
     useEffect(() => {
         const fetchMenus = async () => {
             try {
@@ -94,71 +93,239 @@ export default function Layout() {
         fetchMenus();
     }, []);
 
+    // 路由变化时自动添加标签
+    useEffect(() => {
+        const findMenuName = (items: MenuItem[], path: string): string | null => {
+            for (const item of items) {
+                if (item.path === path) return item.name;
+                if (item.children && item.children.length) {
+                    const found = findMenuName(item.children, path);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        const path = location.pathname;
+        if (!path || path === '/login') return;
+
+        const title =
+            findMenuName(menus, path) || (path === '/profile' ? '个人中心' : path);
+
+        setTabs((prev) => {
+            if (prev.find((t) => t.key === path)) return prev;
+            const newTabs = [...prev, { key: path, title }];
+            localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(newTabs));
+            return newTabs;
+        });
+    }, [location.pathname, menus]);
+
+    // 退出登录
     const handleLogout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem(TABS_STORAGE_KEY);
         window.location.href = '/login';
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <div className="text-gray-400">加载中...</div>
-            </div>
-        );
-    }
+    // 关闭标签
+    const handleCloseTab = (key: string) => {
+        setTabs((prev) => {
+            const idx = prev.findIndex((t) => t.key === key);
+            const newTabs = prev.filter((t) => t.key !== key);
+            localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(newTabs));
 
+            // 如果关闭的是当前标签，跳转到相邻标签
+            if (key === location.pathname) {
+                const next = newTabs[idx - 1] || newTabs[0];
+                if (next) navigate(next.key);
+                else navigate('/dashboard');
+            }
+            return newTabs;
+        });
+    };
+
+    // 关闭其他
+    const handleCloseOthers = (key: string) => {
+        const newTabs = tabs.filter((t) => t.key === key);
+        setTabs(newTabs);
+        localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(newTabs));
+        if (key !== location.pathname) navigate(key);
+    };
+
+    // 关闭所有
+    const handleCloseAll = () => {
+        setTabs([]);
+        localStorage.removeItem(TABS_STORAGE_KEY);
+        navigate('/dashboard');
+    };
+
+    // 关闭左侧
+    const handleCloseLeft = (key: string) => {
+        const idx = tabs.findIndex((t) => t.key === key);
+        if (idx <= 0) return;
+        const newTabs = tabs.slice(idx);
+        setTabs(newTabs);
+        localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(newTabs));
+    };
+
+    // 关闭右侧
+    const handleCloseRight = (key: string) => {
+        const idx = tabs.findIndex((t) => t.key === key);
+        if (idx === -1) return;
+        const newTabs = tabs.slice(0, idx + 1);
+        setTabs(newTabs);
+        localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(newTabs));
+
+        // 如果当前页面被关闭了，跳转到 key 对应页
+        if (location.pathname !== key) {
+            navigate(key);
+        }
+    };
+
+    // 重新加载（相当于刷新当前页面）
+    const handleReload = (key: string) => {
+        if (key === location.pathname) {
+            // 当前页面：重新挂载（通过 key 变化触发）
+            navigate(0 as any); // React Router 的刷新技巧
+        } else {
+            navigate(key);
+        }
+    };
+
+    // 内容全屏
+    const handleFullscreen = (key: string) => {
+        // 如果目标 Tab 不是当前 Tab，先跳转
+        if (key !== location.pathname) {
+            navigate(key);
+        }
+
+        // 延迟一点，等 React 渲染完成
+        setTimeout(() => {
+            const el = document.getElementById('tab-content-area');
+
+            if (!el) {
+                console.warn('未找到内容区元素');
+                return;
+            }
+
+            // 如果已经在全屏，先退出
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+                return;
+            }
+
+            // 请求内容区全屏
+            el.requestFullscreen().catch((err) => {
+                console.error('全屏失败:', err);
+            });
+        }, 150);
+    };
     return (
-        <div className="flex h-screen bg-gray-50">
+        <SidebarProvider>
             {/* ===== 侧边栏 ===== */}
-            <aside
-                className={cn(
-                    "flex flex-col h-screen bg-white border-r border-gray-200 transition-all duration-300",
-                    collapsed ? "w-16" : "w-56"
-                )}
-            >
-                {/* Logo */}
-                <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-                    {!collapsed && (
-                        <span className="text-lg font-bold text-emerald-700">后台管理</span>
-                    )}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setCollapsed(!collapsed)}
-                        className="p-1 hover:bg-gray-100 rounded-lg"
-                    >
-                        {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-                    </Button>
-                </div>
+            <Sidebar>
+                <SidebarHeader>
+                    <div className="flex items-center gap-2 px-2 py-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                            <span className="text-sm font-bold">G</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-semibold">通用后台</span>
+                            <span className="text-xs text-muted-foreground">Admin</span>
+                        </div>
+                    </div>
+                </SidebarHeader>
 
-                {/* 菜单列表 */}
-                <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-                    {menus.map((item) => (
-                        <MenuItem key={item.id} item={item} collapsed={collapsed} />
-                    ))}
-                </nav>
+                <SidebarContent>
+                    <SidebarGroup>
+                        <SidebarGroupLabel>导航菜单</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {loading ? (
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton disabled>
+                                            <span className="text-sm text-muted-foreground">
+                                                加载中...
+                                            </span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ) : menus.length === 0 ? (
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton disabled>
+                                            <span className="text-sm text-muted-foreground">
+                                                暂无菜单
+                                            </span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ) : (
+                                    menus.map((item) => {
+                                        const Icon = item.icon ? iconMap[item.icon] : null;
+                                        const isActive = location.pathname === item.path;
+                                        return (
+                                            <SidebarMenuItem key={item.id}>
+                                                <SidebarMenuButton
+                                                    isActive={isActive}
+                                                    render={<Link to={item.path} />}
+                                                >
+                                                    {Icon && <Icon />}
+                                                    <span>{item.name}</span>
+                                                </SidebarMenuButton>
+                                            </SidebarMenuItem>
+                                        );
+                                    })
+                                )}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                </SidebarContent>
 
-                {/* 底部：退出按钮 */}
-                <div className="p-3 border-t border-gray-200">
-                    <button
-                        onClick={handleLogout}
-                        className={cn(
-                            "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors",
-                            collapsed && "justify-center px-2"
-                        )}
-                    >
-                        <LogOut className="h-5 w-5 flex-shrink-0" />
-                        {!collapsed && <span className="text-sm">退出登录</span>}
-                    </button>
-                </div>
-            </aside>
+                <SidebarFooter>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton
+                                isActive={location.pathname === '/profile'}
+                                render={<Link to="/profile" />}
+                            >
+                                <UserIcon />
+                                <span>个人中心</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton onClick={handleLogout}>
+                                <LogOut />
+                                <span>退出登录</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarFooter>
+            </Sidebar>
 
             {/* ===== 主内容区 ===== */}
-            <main className="flex-1 overflow-y-auto">
-                <div className="p-6">
+            <SidebarInset className="flex flex-col h-screen overflow-hidden">
+                <Header
+                    username={userInfo.username}
+                    roles={userInfo.roles}
+                    onLogout={handleLogout}
+                />
+                <TabBar
+                    tabs={tabs}
+                    activeKey={location.pathname}
+                    onClose={handleCloseTab}
+                    onCloseOthers={handleCloseOthers}
+                    onCloseLeft={handleCloseLeft}
+                    onCloseRight={handleCloseRight}
+                    onCloseAll={handleCloseAll}
+                    onReload={handleReload}
+                    onFullscreen={handleFullscreen}
+                />
+                <div
+                    id="tab-content-area"
+                    data-tab-content
+                    className="flex-1 overflow-auto p-6 bg-background"
+                >
                     <Outlet />
                 </div>
-            </main>
-        </div>
+            </SidebarInset>
+        </SidebarProvider>
     );
 }

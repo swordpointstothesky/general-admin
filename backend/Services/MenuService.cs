@@ -55,4 +55,46 @@ public class MenuService : IMenuService
             })
             .ToList();
     }
+
+    public async Task<List<MenuDto>> GetAllMenusAsync()
+    {
+        var menus = await _context.Menus
+            .OrderBy(m => m.SortOrder)
+            .ToListAsync();
+
+        return BuildMenuTree(menus, null);
+    }
+
+    public async Task<List<int>> GetRoleMenuIdsAsync(int roleId)
+    {
+        return await _context.RoleMenus
+            .Where(rm => rm.RoleId == roleId)
+            .Select(rm => rm.MenuId)
+            .ToListAsync();
+    }
+
+    public async Task<bool> AssignMenusToRoleAsync(int roleId, List<int> menuIds)
+    {
+        var role = await _context.Roles.FindAsync(roleId);
+        if (role == null) return false;
+
+        // 删除旧关联
+        var oldMenus = await _context.RoleMenus
+            .Where(rm => rm.RoleId == roleId)
+            .ToListAsync();
+        _context.RoleMenus.RemoveRange(oldMenus);
+
+        // 添加新关联
+        foreach (var menuId in menuIds)
+        {
+            _context.RoleMenus.Add(new RoleMenu
+            {
+                RoleId = roleId,
+                MenuId = menuId
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

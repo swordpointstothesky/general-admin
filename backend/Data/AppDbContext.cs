@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<UserRole> UserRoles { get; set; }
     public DbSet<RolePermission> RolePermissions { get; set; }
     public DbSet<RoleMenu> RoleMenus { get; set; }
+    public DbSet<OperationLog> OperationLogs { get; set; }
+    public DbSet<Student> Students { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,4 +1,5 @@
 using GeneralAdmin.Backend.Data;
+using GeneralAdmin.Backend.Filters;
 using GeneralAdmin.Backend.Models;
 using GeneralAdmin.Backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -40,6 +41,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IGeneratorService, GeneratorService>();
+builder.Services.AddScoped<IStudentService, StudentService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -51,36 +56,104 @@ builder.Services.AddCors(options =>
     });
 });
 
+// 注册过滤器（全局生效）
+builder.Services.AddScoped<OperationLogFilter>();
+builder.Services.AddHttpContextAccessor();
+
+// 添加全局过滤器
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<OperationLogFilter>();
+});
+
 var app = builder.Build();
 
 // ===== 种子数据：初始化管理员账号 =====
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
 
-    // 如果数据库尚未创建（比如首次运行），自动执行迁移
-    dbContext.Database.Migrate();
-
-    // 检查是否已有用户
-    if (!dbContext.Users.Any())
+    // 1. 初始化角色
+    if (!db.Roles.Any())
     {
-        // 创建管理员用户，密码用 BCrypt 哈希
+        db.Roles.AddRange(
+            new Role { Name = "Admin", Description = "系统管理员，拥有所有权限" },
+            new Role { Name = "User", Description = "普通用户，只有查看权限" }
+        );
+        db.SaveChanges();
+    }
+
+    // 2. 初始化权限
+    if (!db.Permissions.Any())
+    {
+        db.Permissions.AddRange(
+            new Permission { Name = "dashboard:view", DisplayName = "查看仪表盘", Category = "仪表盘" },
+            new Permission { Name = "user:view", DisplayName = "查看用户", Category = "用户管理" },
+            new Permission { Name = "user:create", DisplayName = "创建用户", Category = "用户管理" },
+            new Permission { Name = "user:edit", DisplayName = "编辑用户", Category = "用户管理" },
+            new Permission { Name = "user:delete", DisplayName = "删除用户", Category = "用户管理" },
+            new Permission { Name = "role:view", DisplayName = "查看角色", Category = "角色管理" },
+            new Permission { Name = "role:create", DisplayName = "创建角色", Category = "角色管理" },
+            new Permission { Name = "role:edit", DisplayName = "编辑角色", Category = "角色管理" },
+            new Permission { Name = "role:delete", DisplayName = "删除角色", Category = "角色管理" }
+        );
+        db.SaveChanges();
+    }
+
+    // 3. Admin 角色拥有所有权限
+    var adminRole = db.Roles.First(r => r.Name == "Admin");
+    if (!db.RolePermissions.Any(rp => rp.RoleId == adminRole.Id))
+    {
+        var allPerms = db.Permissions.ToList();
+        foreach (var perm in allPerms)
+        {
+            db.RolePermissions.Add(new RolePermission { RoleId = adminRole.Id, PermissionId = perm.Id });
+        }
+        db.SaveChanges();
+    }
+
+    // 4. 初始化菜单
+    if (!db.Menus.Any())
+    {
+        db.Menus.AddRange(
+            new Menu { Name = "仪表盘", Path = "/dashboard", Icon = "LayoutDashboard", SortOrder = 1 },
+            new Menu { Name = "用户管理", Path = "/users", Icon = "Users", SortOrder = 2 },
+            new Menu { Name = "角色管理", Path = "/roles", Icon = "Shield", SortOrder = 3 },
+            new Menu { Name = "操作日志", Path = "/logs", Icon = "FileText", SortOrder = 4 }
+        );
+        db.SaveChanges();
+    }
+
+    // 5. Admin 角色拥有所有菜单
+    if (!db.RoleMenus.Any(rm => rm.RoleId == adminRole.Id))
+    {
+        var allMenus = db.Menus.ToList();
+        foreach (var menu in allMenus)
+        {
+            db.RoleMenus.Add(new RoleMenu { RoleId = adminRole.Id, MenuId = menu.Id });
+        }
+        db.SaveChanges();
+    }
+
+    // 6. 创建 admin 用户
+    if (!db.Users.Any(u => u.Username == "admin"))
+    {
         var adminUser = new User
         {
             Username = "admin",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
             Email = "admin@example.com",
-            IsActive = true,
-            CreateTime = DateTime.UtcNow
+            IsActive = true
         };
-        dbContext.Users.Add(adminUser);
-        dbContext.SaveChanges();  // 同步保存
-        Console.WriteLine("✅ 已创建默认管理员账号: admin / 123456");
+        db.Users.Add(adminUser);
+        db.SaveChanges();
+
+        db.UserRoles.Add(new UserRole { UserId = adminUser.Id, RoleId = adminRole.Id });
+        db.SaveChanges();
     }
-    else
-    {
-        Console.WriteLine("ℹ️ 数据库已存在用户，跳过种子初始化。");
-    }
+
+    Console.WriteLine("✅ 种子数据初始化完成");
 }
 
 

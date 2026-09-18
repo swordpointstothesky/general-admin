@@ -56,6 +56,10 @@
               "target": "Package",
               "version": "[4.2.0, )"
             },
+            "Dapper": {
+              "target": "Package",
+              "version": "[2.1.86, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[10.0.11, )"
@@ -85,6 +89,10 @@
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
               "version": "[10.0.3, )"
+            },
+            "Scriban": {
+              "target": "Package",
+              "version": "[7.4.0, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
@@ -126,7 +134,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

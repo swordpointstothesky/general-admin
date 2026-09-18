@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GeneralAdmin.Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260904054553_InitialCreate")]
+    [Migration("20260914013606_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -24,6 +24,116 @@ namespace GeneralAdmin.Backend.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("GeneralAdmin.Backend.Models.Menu", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("Menus");
+                });
+
+            modelBuilder.Entity("GeneralAdmin.Backend.Models.OperationLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ClientIP")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<DateTime>("CreateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ExecutionTime")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("QueryString")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestBody")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResponseBody")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("OperationLogs");
+                });
 
             modelBuilder.Entity("GeneralAdmin.Backend.Models.Permission", b =>
                 {
@@ -89,6 +199,21 @@ namespace GeneralAdmin.Backend.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("GeneralAdmin.Backend.Models.RoleMenu", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MenuId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RoleId", "MenuId");
+
+                    b.HasIndex("MenuId");
+
+                    b.ToTable("RoleMenus");
+                });
+
             modelBuilder.Entity("GeneralAdmin.Backend.Models.RolePermission", b =>
                 {
                     b.Property<int>("RoleId")
@@ -151,6 +276,46 @@ namespace GeneralAdmin.Backend.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("GeneralAdmin.Backend.Models.Menu", b =>
+                {
+                    b.HasOne("GeneralAdmin.Backend.Models.Menu", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("GeneralAdmin.Backend.Models.OperationLog", b =>
+                {
+                    b.HasOne("GeneralAdmin.Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GeneralAdmin.Backend.Models.RoleMenu", b =>
+                {
+                    b.HasOne("GeneralAdmin.Backend.Models.Menu", "Menu")
+                        .WithMany("RoleMenus")
+                        .HasForeignKey("MenuId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GeneralAdmin.Backend.Models.Role", "Role")
+                        .WithMany("RoleMenus")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Menu");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("GeneralAdmin.Backend.Models.RolePermission", b =>
                 {
                     b.HasOne("GeneralAdmin.Backend.Models.Permission", "Permission")
@@ -189,6 +354,13 @@ namespace GeneralAdmin.Backend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("GeneralAdmin.Backend.Models.Menu", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("RoleMenus");
+                });
+
             modelBuilder.Entity("GeneralAdmin.Backend.Models.Permission", b =>
                 {
                     b.Navigation("RolePermissions");
@@ -196,6 +368,8 @@ namespace GeneralAdmin.Backend.Migrations
 
             modelBuilder.Entity("GeneralAdmin.Backend.Models.Role", b =>
                 {
+                    b.Navigation("RoleMenus");
+
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");

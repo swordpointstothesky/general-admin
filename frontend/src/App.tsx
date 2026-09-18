@@ -4,59 +4,50 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Roles from './pages/Roles';
+import Logs from './pages/Logs';
+import Profile from './pages/Profile';
+import Generator from './pages/Generator';
+import Students from './pages/Students';
 import Layout from './components/Layout';
+import { PermissionProvider } from './contexts/PermissionContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-// 简单的路由守卫：检查是否有 token
 function PrivateRoute({ children }: { children: ReactNode }) {
-  const token = localStorage.getItem('token');
-  return token ? <>{children}</> : <Navigate to="/login" replace />;
+    const token = localStorage.getItem('token');
+    return token ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          element={
-            <PrivateRoute>
-              <Layout />
-            </PrivateRoute>
-          }
-        >
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/users"
-            element={
-              <PrivateRoute>
-                <Users />
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/roles"
-            element={
-              <PrivateRoute>
-                <Roles />
-              </PrivateRoute>
-            }
-          />
-        </Route>
-
-
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
-  );
+    return (
+        <ThemeProvider>
+            <TooltipProvider delayDuration={300}>
+                <PermissionProvider>
+                    <BrowserRouter>
+                        <Routes>
+                            <Route path="/login" element={<Login />} />
+                            <Route
+                                element={
+                                    <PrivateRoute>
+                                        <Layout />
+                                    </PrivateRoute>
+                                }
+                            >
+                                <Route path="/dashboard" element={<Dashboard />} />
+                                <Route path="/users" element={<Users />} />
+                                <Route path="/roles" element={<Roles />} />
+                                <Route path="/logs" element={<Logs />} />
+                                <Route path="/profile" element={<Profile />} />
+                                <Route path="/generator" element={<Generator />} />
+                                <Route path="/students" element={<Students />} />
+                            </Route>
+                            <Route path="*" element={<Navigate to="/login" replace />} />
+                        </Routes>
+                    </BrowserRouter>
+                </PermissionProvider>
+            </TooltipProvider>
+        </ThemeProvider>
+    );
 }
 
 export default App;

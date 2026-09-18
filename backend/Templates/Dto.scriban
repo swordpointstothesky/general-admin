@@ -1,0 +1,26 @@
+namespace GeneralAdmin.Backend.DTOs;
+
+public class {{ ModuleName }}Dto
+{
+{{~ for col in Columns ~}}
+    public {{ col.CSharpType }} {{ col.ColumnName }} { get; set; }{{ if col.CSharpType == "string" || col.CSharpType == "string?" }} = string.Empty;{{ end }}
+{{~ end ~}}
+}
+
+public class Create{{ ModuleName }}Request
+{
+{{~ for col in FormColumns ~}}
+    public {{ col.CSharpType }} {{ col.ColumnName }} { get; set; }{{ if col.CSharpType == "string" || col.CSharpType == "string?" }} = string.Empty;{{ end }}
+{{~ end ~}}
+}
+
+public class Update{{ ModuleName }}Request
+{
+{{~ for col in FormColumns ~}}
+{{~ if col.CSharpType | string.ends_with "?" ~}}
+    public {{ col.CSharpType }} {{ col.ColumnName }} { get; set; }
+{{~ else ~}}
+    public {{ col.CSharpType }}? {{ col.ColumnName }} { get; set; }
+{{~ end ~}}
+{{~ end ~}}
+}

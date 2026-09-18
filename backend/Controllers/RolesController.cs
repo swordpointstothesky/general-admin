@@ -14,11 +14,14 @@ public class RolesController : ControllerBase
 {
     private readonly IRoleService _roleService;
     private readonly AppDbContext _context;
+    private readonly IMenuService _menuService;
 
-    public RolesController(IRoleService roleService, AppDbContext context)
+
+    public RolesController(IRoleService roleService, AppDbContext context, IMenuService menuService)
     {
         _roleService = roleService;
         _context = context;
+        _menuService = menuService;
     }
 
     [HttpGet]
@@ -98,5 +101,22 @@ public class RolesController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    // 获取角色已分配的菜单 ID
+    [HttpGet("{id}/menus")]
+    public async Task<IActionResult> GetRoleMenus(int id)
+    {
+        var menuIds = await _menuService.GetRoleMenuIdsAsync(id);
+        return Ok(menuIds);
+    }
+
+    // 为角色分配菜单
+    [HttpPost("{id}/menus")]
+    public async Task<IActionResult> AssignMenus(int id, [FromBody] AssignMenuRequest request)
+    {
+        var result = await _menuService.AssignMenusToRoleAsync(id, request.MenuIds);
+        if (!result) return NotFound();
+        return NoContent();
     }
 }
