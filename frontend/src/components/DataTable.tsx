@@ -150,7 +150,7 @@ export function DataTable<T extends Record<string, any>>({
         const { page, pageSize, total, pageSizeOptions = [10, 20, 50, 100], onPageChange } = pagination;
 
         return (
-            <div className="flex items-center justify-between px-4 py-3 border-t bg-background">
+            <div className="flex items-center justify-between px-4 py-3 hrink-0">
                 <div className="text-sm text-muted-foreground">
                     共 <strong>{total}</strong> 条
                 </div>
@@ -210,7 +210,7 @@ export function DataTable<T extends Record<string, any>>({
     // ========== 加载状态 ==========
     if (loading) {
         return (
-            <div className="border rounded-lg bg-background">
+            <div className="rounded-lg bg-background overflow-hidden">
                 <div className="flex justify-center items-center py-20">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
@@ -226,19 +226,20 @@ export function DataTable<T extends Record<string, any>>({
 
 
     return (
-        <div className="border rounded-lg bg-background overflow-hidden">
+        <div className="rounded-lg bg-background overflow-hidden py-4 px-6 flex flex-col h-full">
             {/* ===== 工具栏 ===== */}
             {(toolbar || toolbarRight) && (
-                <div className="flex items-center justify-between px-4 py-3 border-b">
+                <div className="flex items-center justify-between px-4 py-3 bg-background shrink-0">
                     <div className="flex items-center gap-2">{toolbar}</div>
                     <div className="flex items-center gap-1">{toolbarRight}</div>
                 </div>
             )}
 
+
             {/* ===== 表格 ===== */}
-            <div className="overflow-x-auto">
+            <div className="flex-1 overflow-x-auto border rounded-lg">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-muted/60">
                         <TableRow className="bg-muted/40 hover:bg-muted/40">
                             {selectable && (
                                 <TableHead className="w-12">
@@ -343,6 +344,7 @@ export function DataTable<T extends Record<string, any>>({
 
             {/* ===== 分页 ===== */}
             {renderPagination()}
+
         </div>
     );
 }

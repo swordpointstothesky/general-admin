@@ -6,6 +6,7 @@ import { EntityFormDialog } from '@/components/EntityFormDialog';
 import type { FormField } from '@/components/EntityFormDialog';
 import { ColumnSettings } from '@/components/ColumnSettings';
 import type { ColumnSettingItem } from '@/components/ColumnSettings';
+import { useFullscreen } from '@/hooks/useFullscreen';
 import { exportToExcel } from '@/lib/export';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +72,9 @@ export default function Students() {
 
     // 批量删除
     const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+
+    //全屏
+    const tableFullscreen = useFullscreen<HTMLDivElement>();
 
     // 列设置
     const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
@@ -291,9 +295,9 @@ export default function Students() {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="flex flex-col h-full gap-3">
             {/* ===== 查询表单 ===== */}
-            <div className="border rounded-lg bg-background p-4">
+            <div className="rounded-lg bg-background p-4 shrink-0">
                 <div className="flex flex-wrap gap-4">
                     <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">姓名</Label>
@@ -353,106 +357,114 @@ export default function Students() {
             </div>
 
             {/* ===== 数据表格 ===== */}
-            <DataTable
-                columns={columns}
-                data={pagedData}
-                loading={loading}
-                rowKey="id"
-                showIndex                                  // ✅ 启用序号列
-                indexOffset={(pagination.page - 1) * pagination.pageSize}  // ✅ 跨页连续
-                selectable
-                selectedKeys={selectedKeys}
-                onSelectionChange={setSelectedKeys}
-                sortField={sortField}
-                sortOrder={sortOrder}
-                onSortChange={(field, order) => {
-                    setSortField(field);
-                    setSortOrder(order);
-                }}
-                pagination={{
-                    page: pagination.page,
-                    pageSize: pagination.pageSize,
-                    total: filteredData.length,
-                    onPageChange: (page, pageSize) => {
-                        setPagination({ page, pageSize, total: filteredData.length });
-                    },
-                }}
-                toolbar={
-                    <>
-                        <Button size="sm" onClick={handleOpenCreate}>
-                            <Plus className="mr-1.5 h-4 w-4" />
-                            新增
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setBatchDeleteOpen(true)}
-                            disabled={selectedKeys.length === 0}
-                        >
-                            <Trash2 className="mr-1.5 h-4 w-4" />
-                            删除
-                            {selectedKeys.length > 0 && ` (${selectedKeys.length})`}
-                        </Button>
-                        {selectedKeys.length > 0 && (
+            <div ref={tableFullscreen.ref} className="flex-1 overflow-hidden mb-4">
+                <DataTable
+                    columns={columns}
+                    data={pagedData}
+                    loading={loading}
+                    rowKey="id"
+                    showIndex                                  // ✅ 启用序号列
+                    indexOffset={(pagination.page - 1) * pagination.pageSize}  // ✅ 跨页连续
+                    selectable
+                    selectedKeys={selectedKeys}
+                    onSelectionChange={setSelectedKeys}
+                    sortField={sortField}
+                    sortOrder={sortOrder}
+                    onSortChange={(field, order) => {
+                        setSortField(field);
+                        setSortOrder(order);
+                    }}
+                    pagination={{
+                        page: pagination.page,
+                        pageSize: pagination.pageSize,
+                        total: filteredData.length,
+                        onPageChange: (page, pageSize) => {
+                            setPagination({ page, pageSize, total: filteredData.length });
+                        },
+                    }}
+                    toolbar={
+                        <>
+                            <Button size="sm" onClick={handleOpenCreate}>
+                                <Plus className="mr-1.5 h-4 w-4" />
+                                新增
+                            </Button>
                             <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={handleExportSelected}
+                                onClick={() => setBatchDeleteOpen(true)}
+                                disabled={selectedKeys.length === 0}
                             >
-                                <Download className="mr-1.5 h-4 w-4" />
-                                导出选中 ({selectedKeys.length})
+                                <Trash2 className="mr-1.5 h-4 w-4" />
+                                删除
+                                {selectedKeys.length > 0 && ` (${selectedKeys.length})`}
                             </Button>
-                        )}
-                        <Button size="sm" variant="outline">
-                            <Upload className="mr-1.5 h-4 w-4" />
-                            导入
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={handleExportAll}>
-                            <Download className="mr-1.5 h-4 w-4" />
-                            导出
-                        </Button>
-                    </>
-                }
-                toolbarRight={
-                    <>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={fetchItems}>
-                            <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8">
-                            <Maximize2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => setColumnSettingsOpen(true)}
-                            title="列设置"
-                        >
-                            <Settings2 className="h-4 w-4" />
-                        </Button>
-                    </>
-                }
-                actions={(record) => (
-                    <>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-primary h-8 px-2"
-                            onClick={() => handleOpenEdit(record)}
-                        >
-                            <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive h-8 px-2"
-                            onClick={() => handleOpenDelete(record)}
-                        >
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                    </>
-                )}
-            />
+                            {selectedKeys.length > 0 && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleExportSelected}
+                                >
+                                    <Download className="mr-1.5 h-4 w-4" />
+                                    导出选中 ({selectedKeys.length})
+                                </Button>
+                            )}
+                            <Button size="sm" variant="outline">
+                                <Upload className="mr-1.5 h-4 w-4" />
+                                导入
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={handleExportAll}>
+                                <Download className="mr-1.5 h-4 w-4" />
+                                导出
+                            </Button>
+                        </>
+                    }
+                    toolbarRight={
+                        <>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={fetchItems}>
+                                <RefreshCw className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={tableFullscreen.toggle}
+                                title={tableFullscreen.isFullscreen ? '退出全屏' : '全屏'}
+                            >
+                                <Maximize2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => setColumnSettingsOpen(true)}
+                                title="列设置"
+                            >
+                                <Settings2 className="h-4 w-4" />
+                            </Button>
+                        </>
+                    }
+                    actions={(record) => (
+                        <>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary h-8 px-2"
+                                onClick={() => handleOpenEdit(record)}
+                            >
+                                <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive h-8 px-2"
+                                onClick={() => handleOpenDelete(record)}
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </>
+                    )}
+                />
+            </div>
 
             {/* ===== 新增/编辑弹窗 ===== */}
             <EntityFormDialog

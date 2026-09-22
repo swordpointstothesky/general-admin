@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '@/api';
 import { DataTable } from '@/components/DataTable';
 import type { ColumnConfig } from '@/components/DataTable';
@@ -8,6 +8,7 @@ import { ColumnSettings } from '@/components/ColumnSettings';
 import type { ColumnSettingItem } from '@/components/ColumnSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import {
     AlertDialog,
@@ -26,15 +27,17 @@ import {
 } from 'lucide-react';
 
 // ========== 类型定义 ==========
-interface {{ ModuleName }} {
-{{~ for col in Columns ~}}
-    {{ col.CamelName }}: {{ col.TsType }};
-{{~ end ~}}
+interface Teacher {
+    id: number;
+    name: string;
+    gender: string;
+    age: number;
+    createTime: string;
 }
 
 // ========== 主组件 ==========
-export default function {{ ModuleName }}s() {
-    const [items, setItems] = useState<{{ ModuleName }}[]>([]);
+export default function Teachers() {
+    const [items, setItems] = useState<Teacher[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
 
@@ -46,30 +49,30 @@ export default function {{ ModuleName }}s() {
     const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 });
 
     // 排序
-    const [sortField, setSortField] = useState('{{ PkCamelName }}');
+    const [sortField, setSortField] = useState('id');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
     // 弹窗
     const [formOpen, setFormOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState<{{ ModuleName }} | null>(null);
+    const [editingItem, setEditingItem] = useState<Teacher | null>(null);
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [submitting, setSubmitting] = useState(false);
 
     // 删除
     const [deleteOpen, setDeleteOpen] = useState(false);
-    const [deletingItem, setDeletingItem] = useState<{{ ModuleName }} | null>(null);
+    const [deletingItem, setDeletingItem] = useState<Teacher | null>(null);
     const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
     // 列设置
     const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
-    const defaultVisible = [{{ DefaultVisible }}];
+    const defaultVisible = ['id', 'name', 'gender', 'age', 'createTime'];
     const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() => {
-        const saved = localStorage.getItem('{{ CamelName }}-columns-visible');
+        const saved = localStorage.getItem('teacher-columns-visible');
         return saved ? JSON.parse(saved) : defaultVisible;
     });
     const [columnOrder, setColumnOrder] = useState<string[]>(() => {
-        const saved = localStorage.getItem('{{ CamelName }}-columns-order');
+        const saved = localStorage.getItem('teacher-columns-order');
         return saved ? JSON.parse(saved) : defaultVisible;
     });
 
@@ -80,7 +83,7 @@ export default function {{ ModuleName }}s() {
     const fetchItems = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/api/{{ CamelName }}s');
+            const res = await api.get('/api/teachers');
             setItems(res.data);
             setPagination((p) => ({ ...p, total: res.data.length }));
         } finally {
@@ -122,19 +125,37 @@ export default function {{ ModuleName }}s() {
     };
 
     // ========== 列定义 ==========
-    const allColumns: ColumnConfig<{{ ModuleName }}>[] = [
-{{~ for col in ListColumns ~}}
+    const allColumns: ColumnConfig<Teacher>[] = [
         {
-            key: '{{ col.CamelName }}',
-            title: '{{ col.DisplayName }}',
-{{~ if col.IsPrimaryKey ~}}
+            key: 'id',
+            title: 'Id',
             width: '80px',
-{{~ end ~}}
-{{~ if col.CSharpType == "int" || col.CSharpType == "int?" || col.CSharpType == "long" || col.CSharpType == "long?" || col.CSharpType == "decimal" || col.CSharpType == "decimal?" ~}}
             sortable: true,
-{{~ end ~}}
         },
-{{~ end ~}}
+        {
+            key: 'name',
+            title: '姓名',
+        },
+        {
+            key: 'gender',
+            title: '性别',
+            width: '90px',
+            render: (value) => (
+                <Badge variant={value === '男' ? 'default' : 'secondary'} className="font-normal">
+                    {value}
+                </Badge>
+            ),
+        },
+        {
+            key: 'age',
+            title: '年龄',
+            sortable: true,
+        },
+        {
+            key: 'createTime',
+            title: '创建时间',
+            render: (v) => (v ? new Date(v).toLocaleDateString('zh-CN') : '-'),
+        },
     ];
 
     const columns = columnOrder
@@ -157,28 +178,39 @@ export default function {{ ModuleName }}s() {
         const visible = newColumns.filter((c) => c.visible).map((c) => c.key);
         setColumnOrder(order);
         setVisibleColumnKeys(visible);
-        localStorage.setItem('{{ CamelName }}-columns-order', JSON.stringify(order));
-        localStorage.setItem('{{ CamelName }}-columns-visible', JSON.stringify(visible));
+        localStorage.setItem('teacher-columns-order', JSON.stringify(order));
+        localStorage.setItem('teacher-columns-visible', JSON.stringify(visible));
     };
 
     // ========== 表单字段 ==========
     const formFields: FormField[] = [
-{{~ for col in FormColumns ~}}
         {
-            key: '{{ col.CamelName }}',
-            label: '{{ col.DisplayName }}',
-{{~ if col.CSharpType == "int" || col.CSharpType == "int?" || col.CSharpType == "long" || col.CSharpType == "long?" || col.CSharpType == "decimal" || col.CSharpType == "decimal?" ~}}
-            type: 'number',
-{{~ end ~}}
+            key: 'name',
+            label: '姓名',
         },
-{{~ end ~}}
+        {
+            key: 'gender',
+            label: '性别',
+            type: 'select',
+            options: [
+                { label: '男', value: '男' },
+                { label: '女', value: '女' },
+            ],
+        },
+        {
+            key: 'age',
+            label: '年龄',
+            type: 'number',
+        },
     ];
 
     // ========== 导出列 ==========
     const exportColumns = [
-{{~ for col in ListColumns ~}}
-        { key: '{{ col.CamelName }}', title: '{{ col.DisplayName }}' },
-{{~ end ~}}
+        { key: 'id', title: 'Id' },
+        { key: 'name', title: '姓名' },
+        { key: 'gender', title: '性别' },
+        { key: 'age', title: '年龄' },
+        { key: 'createTime', title: '创建时间' },
     ];
 
     // ========== 新增 ==========
@@ -189,7 +221,7 @@ export default function {{ ModuleName }}s() {
     };
 
     // ========== 编辑 ==========
-    const handleOpenEdit = (item: {{ ModuleName }}) => {
+    const handleOpenEdit = (item: Teacher) => {
         setEditingItem(item);
         setFormData({ ...item });
         setFormOpen(true);
@@ -200,9 +232,9 @@ export default function {{ ModuleName }}s() {
         setSubmitting(true);
         try {
             if (editingItem) {
-                await api.put(`/api/{{ CamelName }}s/${(editingItem as any).{{ PkCamelName }}}`, formData);
+                await api.put(`/api/teachers/${(editingItem as any).id}`, formData);
             } else {
-                await api.post('/api/{{ CamelName }}s', formData);
+                await api.post('/api/teachers', formData);
             }
             setFormOpen(false);
             fetchItems();
@@ -214,7 +246,7 @@ export default function {{ ModuleName }}s() {
     };
 
     // ========== 删除 ==========
-    const handleOpenDelete = (item: {{ ModuleName }}) => {
+    const handleOpenDelete = (item: Teacher) => {
         setDeletingItem(item);
         setDeleteOpen(true);
     };
@@ -223,7 +255,7 @@ export default function {{ ModuleName }}s() {
         if (!deletingItem) return;
         setDeleting(true);
         try {
-            await api.delete(`/api/{{ CamelName }}s/${(deletingItem as any).{{ PkCamelName }}}`);
+            await api.delete(`/api/teachers/${(deletingItem as any).id}`);
             setDeleteOpen(false);
             setDeletingItem(null);
             fetchItems();
@@ -238,7 +270,7 @@ export default function {{ ModuleName }}s() {
     const handleBatchDelete = async () => {
         setDeleting(true);
         try {
-            await Promise.all(selectedKeys.map((key) => api.delete(`/api/{{ CamelName }}s/${key}`)));
+            await Promise.all(selectedKeys.map((key) => api.delete(`/api/teachers/${key}`)));
             setBatchDeleteOpen(false);
             setSelectedKeys([]);
             fetchItems();
@@ -251,30 +283,46 @@ export default function {{ ModuleName }}s() {
 
     // ========== 导出 ==========
     const handleExportAll = () => {
-        exportToExcel(sortedData, exportColumns, '{{ DisplayName }}列表', '{{ DisplayName }}');
+        exportToExcel(sortedData, exportColumns, 'Teacher列表', 'Teacher');
     };
 
     const handleExportSelected = () => {
-        const selected = items.filter((s: any) => selectedKeys.includes(s.{{ PkCamelName }}));
-        exportToExcel(selected, exportColumns, '{{ DisplayName }}列表_选中', '{{ DisplayName }}');
+        const selected = items.filter((s: any) => selectedKeys.includes(s.id));
+        exportToExcel(selected, exportColumns, 'Teacher列表_选中', 'Teacher');
     };
 
     return (
-        <div className="flex flex-col h-full gap-3">
+        <div className="space-y-3">
             {/* ===== 查询表单 ===== */}
-            <div className="rounded-lg bg-background p-4 shrink-0">
+            <div className="rounded-lg bg-background p-4">
                 <div className="flex flex-wrap gap-4">
-{{~ for col in FormColumns ~}}
                     <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{{ col.DisplayName }}</Label>
+                        <Label className="text-xs text-muted-foreground">姓名</Label>
                         <Input
-                            placeholder="请输入{{ col.DisplayName }}"
-                            value={filters.{{ col.CamelName }} || ''}
-                            onChange={(e) => setFilters({ ...filters, {{ col.CamelName }}: e.target.value })}
+                            placeholder="请输入姓名"
+                            value={filters.name || ''}
+                            onChange={(e) => setFilters({ ...filters, name: e.target.value })}
                             className="w-48 h-10"
                         />
                     </div>
-{{~ end ~}}
+                    <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">性别</Label>
+                        <Input
+                            placeholder="请输入性别"
+                            value={filters.gender || ''}
+                            onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
+                            className="w-48 h-10"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">年龄</Label>
+                        <Input
+                            placeholder="请输入年龄"
+                            value={filters.age || ''}
+                            onChange={(e) => setFilters({ ...filters, age: e.target.value })}
+                            className="w-48 h-10"
+                        />
+                    </div>
                     <div className="space-y-1.5 ml-auto">
                         <Label className="text-xs text-muted-foreground invisible">占位</Label>
                         <div className="flex items-center gap-2">
@@ -302,12 +350,12 @@ export default function {{ ModuleName }}s() {
             </div>
 
             {/* ===== 数据表格 ===== */}
-            <div ref={tableFullscreen.ref} className="flex-1 overflow-hidden mb-4">
+            <div ref={tableFullscreen.ref}>
                 <DataTable
                     columns={columns}
                     data={pagedData}
                     loading={loading}
-                    rowKey="{{ PkCamelName }}"
+                    rowKey="id"
                     showIndex
                     indexOffset={(pagination.page - 1) * pagination.pageSize}
                     selectable
@@ -382,7 +430,7 @@ export default function {{ ModuleName }}s() {
             <EntityFormDialog
                 open={formOpen}
                 onOpenChange={setFormOpen}
-                title={editingItem ? '编辑{{ DisplayName }}' : '新增{{ DisplayName }}'}
+                title={editingItem ? '编辑Teacher' : '新增Teacher'}
                 fields={formFields}
                 formData={formData}
                 onFormChange={setFormData}
@@ -397,7 +445,7 @@ export default function {{ ModuleName }}s() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>确认删除</AlertDialogTitle>
                         <AlertDialogDescription>
-                            确定要删除这条 {{ DisplayName }} 记录吗？此操作不可撤销。
+                            确定要删除这条 Teacher 记录吗？此操作不可撤销。
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

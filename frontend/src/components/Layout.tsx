@@ -16,17 +16,13 @@ import {
     SidebarProvider,
 } from '@/components/ui/sidebar';
 import {
-    LayoutDashboard,
-    Users,
-    Shield,
-    FileText,
     LogOut,
     User as UserIcon,
-    Code,
 } from 'lucide-react';
 import { Header } from './layout/Header';
 import { TabBar } from './layout/TabBar';
 import type { TabItem } from './layout/TabBar';
+import { SidebarMenuTree } from './layout/SidebarMenuTree';
 
 // ========== 菜单类型 ==========
 interface MenuItem {
@@ -37,15 +33,6 @@ interface MenuItem {
     icon: string | null;
     children: MenuItem[];
 }
-
-const iconMap: Record<string, any> = {
-    LayoutDashboard,
-    Users,
-    Shield,
-    FileText,
-    User: UserIcon,
-    Code,
-};
 
 const TABS_STORAGE_KEY = 'open-tabs';
 
@@ -222,110 +209,100 @@ export default function Layout() {
     };
     return (
         <SidebarProvider>
-            {/* ===== 侧边栏 ===== */}
-            <Sidebar>
-                <SidebarHeader>
-                    <div className="flex items-center gap-2 px-2 py-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                            <span className="text-sm font-bold">G</span>
+            <div
+                className="flex w-full h-screen gap-3"
+                style={{ backgroundColor: 'var(--content-bg)' }}
+            >
+                {/* ===== 侧边栏 ===== */}
+                <Sidebar>
+                    <SidebarHeader>
+                        <div className="flex items-center gap-2 px-2 py-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                                <span className="text-sm font-bold">G</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-semibold">通用后台</span>
+                                <span className="text-xs text-muted-foreground">Admin</span>
+                            </div>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-semibold">通用后台</span>
-                            <span className="text-xs text-muted-foreground">Admin</span>
-                        </div>
-                    </div>
-                </SidebarHeader>
+                    </SidebarHeader>
 
-                <SidebarContent>
-                    <SidebarGroup>
-                        <SidebarGroupLabel>导航菜单</SidebarGroupLabel>
-                        <SidebarGroupContent>
-                            <SidebarMenu>
+                    <SidebarContent>
+                        <SidebarGroup>
+                            <SidebarGroupLabel>导航菜单</SidebarGroupLabel>
+                            <SidebarGroupContent>
                                 {loading ? (
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton disabled>
-                                            <span className="text-sm text-muted-foreground">
-                                                加载中...
-                                            </span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
+                                    <SidebarMenu>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton disabled>
+                                                <span className="text-sm text-muted-foreground">加载中...</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    </SidebarMenu>
                                 ) : menus.length === 0 ? (
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton disabled>
-                                            <span className="text-sm text-muted-foreground">
-                                                暂无菜单
-                                            </span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
+                                    <SidebarMenu>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton disabled>
+                                                <span className="text-sm text-muted-foreground">暂无菜单</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    </SidebarMenu>
                                 ) : (
-                                    menus.map((item) => {
-                                        const Icon = item.icon ? iconMap[item.icon] : null;
-                                        const isActive = location.pathname === item.path;
-                                        return (
-                                            <SidebarMenuItem key={item.id}>
-                                                <SidebarMenuButton
-                                                    isActive={isActive}
-                                                    render={<Link to={item.path} />}
-                                                >
-                                                    {Icon && <Icon />}
-                                                    <span>{item.name}</span>
-                                                </SidebarMenuButton>
-                                            </SidebarMenuItem>
-                                        );
-                                    })
+                                    <SidebarMenuTree menus={menus} />
                                 )}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                </SidebarContent>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+                    </SidebarContent>
 
-                <SidebarFooter>
-                    <SidebarMenu>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                isActive={location.pathname === '/profile'}
-                                render={<Link to="/profile" />}
-                            >
-                                <UserIcon />
-                                <span>个人中心</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={handleLogout}>
-                                <LogOut />
-                                <span>退出登录</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarFooter>
-            </Sidebar>
+                    <SidebarFooter>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    isActive={location.pathname === '/profile'}
+                                    render={<Link to="/profile" />}
+                                >
+                                    <UserIcon />
+                                    <span>个人中心</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton onClick={handleLogout}>
+                                    <LogOut />
+                                    <span>退出登录</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarFooter>
+                </Sidebar>
 
-            {/* ===== 主内容区 ===== */}
-            <SidebarInset className="flex flex-col h-screen overflow-hidden">
-                <Header
-                    username={userInfo.username}
-                    roles={userInfo.roles}
-                    onLogout={handleLogout}
-                />
-                <TabBar
-                    tabs={tabs}
-                    activeKey={location.pathname}
-                    onClose={handleCloseTab}
-                    onCloseOthers={handleCloseOthers}
-                    onCloseLeft={handleCloseLeft}
-                    onCloseRight={handleCloseRight}
-                    onCloseAll={handleCloseAll}
-                    onReload={handleReload}
-                    onFullscreen={handleFullscreen}
-                />
-                <div
-                    id="tab-content-area"
-                    data-tab-content
-                    className="flex-1 overflow-auto p-6 bg-background"
-                >
-                    <Outlet />
-                </div>
-            </SidebarInset>
+                {/* ===== 主内容区 ===== */}
+                <SidebarInset className="flex flex-col h-screen overflow-hidden mr-3">
+                    <Header
+                        username={userInfo.username}
+                        roles={userInfo.roles}
+                        onLogout={handleLogout}
+                    />
+                    <TabBar
+                        tabs={tabs}
+                        activeKey={location.pathname}
+                        onClose={handleCloseTab}
+                        onCloseOthers={handleCloseOthers}
+                        onCloseLeft={handleCloseLeft}
+                        onCloseRight={handleCloseRight}
+                        onCloseAll={handleCloseAll}
+                        onReload={handleReload}
+                        onFullscreen={handleFullscreen}
+                    />
+                    <div
+                        id="tab-content-area"
+                        data-tab-content
+                        className="flex-1 overflow-hidden pt-3"
+                        style={{ backgroundColor: 'var(--content-bg)' }}
+                    >
+                        <Outlet />
+                    </div>
+                </SidebarInset>
+            </div>
         </SidebarProvider>
     );
 }

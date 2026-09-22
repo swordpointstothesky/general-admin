@@ -11,7 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 export interface FormField {
     key: string;
     label: string;
@@ -68,20 +74,22 @@ export function EntityFormDialog({
                             </Label>
 
                             {field.type === 'select' ? (
-                                <select
-                                    id={`form-${field.key}`}
+                                <Select
                                     value={formData[field.key] ?? ''}
-                                    onChange={(e) => handleChange(field.key, e.target.value)}
+                                    onValueChange={(value) => handleChange(field.key, value ?? '')}
                                     disabled={field.disabled}
-                                    className="w-full h-10 px-3 border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                                 >
-                                    <option value="">请选择</option>
-                                    {field.options?.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <SelectTrigger id={`form-${field.key}`} className="w-full">
+                                        <SelectValue placeholder="请选择" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {field.options?.map((opt) => (
+                                            <SelectItem key={opt.value} value={String(opt.value)}>
+                                                {opt.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             ) : field.type === 'textarea' ? (
                                 <textarea
                                     id={`form-${field.key}`}

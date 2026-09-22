@@ -132,7 +132,7 @@ export function TabBar({
 
     return (
         <>
-            <div className="flex items-center gap-1 px-3 py-1.5 border-b bg-background overflow-x-auto shrink-0">
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-background overflow-x-auto shrink-0 rounded-b-lg">
                 {tabs.map((tab) => {
                     const isActive = activeKey === tab.key;
                     return (

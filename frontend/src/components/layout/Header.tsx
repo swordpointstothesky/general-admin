@@ -15,13 +15,16 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { UserDropdown } from './UserDropdown';
 
 const breadcrumbMap: Record<string, string[]> = {
-    '/dashboard': ['首页', '仪表盘'],
+    '/dashboard': ['仪表盘'],
+    '/dashboard/monitor': ['仪表盘', '监控页'],
+    '/dashboard/workplace': ['仪表盘', '工作台'],
     '/users': ['系统管理', '用户管理'],
     '/roles': ['系统管理', '角色管理'],
-    '/logs': ['系统管理', '操作日志'],
-    '/profile': ['个人中心'],
-    '/generator': ['开发工具', '代码生成'],
+    '/generator': ['开发工具', '代码生成器'],
+    '/logs': ['日志管理', '操作日志'],
     '/students': ['业务管理', '学生管理'],
+    '/teachers': ['业务管理', '老师管理'],
+    '/profile': ['个人中心'],
 };
 
 interface HeaderProps {
@@ -64,7 +67,7 @@ export function Header({ username, email, roles, onLogout }: HeaderProps) {
     };
 
     return (
-        <header className="flex h-14 items-center justify-between border-b bg-background px-4 shrink-0">
+        <header className="flex h-14 items-center bg-background justify-between border-b px-4 shrink-0">
             {/* 左侧：折叠按钮 + 面包屑 */}
             <div className="flex items-center gap-2">
                 <SidebarTrigger className="-ml-1" />

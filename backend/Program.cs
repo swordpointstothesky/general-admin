@@ -6,11 +6,19 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
+using Scrutor;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddControllers();
 
+// ========== 1. Controllers（带全局过滤器） ==========
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<OperationLogFilter>();
+});
+
+// ========== 2. 授权策略 ==========
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Permission", policy =>
@@ -19,9 +27,11 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
+// ========== 3. 数据库 ==========
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// ========== 4. JWT 认证 ==========
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -38,16 +48,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<IMenuService, MenuService>();
-builder.Services.AddScoped<ILogService, LogService>();
-builder.Services.AddScoped<IProfileService, ProfileService>();
-builder.Services.AddScoped<IGeneratorService, GeneratorService>();
-builder.Services.AddScoped<IStudentService, StudentService>();
+// ========== 5. ✅ Service 自动注册（Scrutor） ==========
+builder.Services.Scan(scan => scan
+    .FromAssembliesOf(typeof(AppDbContext))
+    .AddClasses(classes => classes
+        .Where(t => t.Name.EndsWith("Service") && !t.IsAbstract))
+    .AsMatchingInterface()
+    .WithScopedLifetime());
 
+// ========== 6. 手动注册（不走约定的服务） ==========
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<OperationLogFilter>();
+
+// ========== 7. 注册 OpenAPI 文档生成服务 ==========
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// 注册 OpenAPI 文档生成服务，并添加 JWT 安全方案转换器
+builder.Services.AddOpenApi("v1", options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});
+
+// ========== 8. CORS ==========
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -56,19 +77,9 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 注册过滤器（全局生效）
-builder.Services.AddScoped<OperationLogFilter>();
-builder.Services.AddHttpContextAccessor();
-
-// 添加全局过滤器
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add<OperationLogFilter>();
-});
-
 var app = builder.Build();
 
-// ===== 种子数据：初始化管理员账号 =====
+// ========== 种子数据 ==========
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -156,17 +167,22 @@ using (var scope = app.Services.CreateScope())
     Console.WriteLine("✅ 种子数据初始化完成");
 }
 
-
+// ========== 中间件 在开发环境中启用 OpenAPI 和 Scalar UI ==========
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    // 提供 OpenAPI JSON 文档，默认路径为 /openapi/v1.json
+    app.MapOpenApi();
+
+    // 映射 Scalar UI，默认访问路径为 /scalar/v1
+    app.MapScalarApiReference();
 }
 
 app.UseCors("AllowAll");
+
 app.MapGet("/api/hello", () => new { Message = "Hello from .NET 10!", Timestamp = DateTime.Now });
 
 app.UseHttpsRedirection();
+app.UseAuthentication();   // ⚠️ 这个别漏了，顺序要在 UseAuthorization 之前
 app.UseAuthorization();
 app.MapControllers();
 

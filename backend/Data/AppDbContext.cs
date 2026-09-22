@@ -16,6 +16,9 @@ public class AppDbContext : DbContext
     public DbSet<RoleMenu> RoleMenus { get; set; }
     public DbSet<OperationLog> OperationLogs { get; set; }
     public DbSet<Student> Students { get; set; }
+    public DbSet<Teacher> Teachers { get; set; }
+    public DbSet<DictType> DictTypes { get; set; }
+    public DbSet<DictItem> DictItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -71,5 +74,19 @@ public class AppDbContext : DbContext
             .HasOne(rm => rm.Menu)
             .WithMany(m => m.RoleMenus)
             .HasForeignKey(rm => rm.MenuId);
+
+        // 字典类型 → 字典项（一对多，级联删除）
+        modelBuilder.Entity<DictItem>()
+            .HasOne(i => i.DictType)
+            .WithMany(t => t.Items)
+            .HasForeignKey(i => i.DictTypeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // 字典类型 → 菜单（多对一，菜单删除时字典变通用）
+        modelBuilder.Entity<DictType>()
+            .HasOne(t => t.Menu)
+            .WithMany()
+            .HasForeignKey(t => t.MenuId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

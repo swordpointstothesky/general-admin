@@ -132,30 +132,42 @@ public class GeneratorService : IGeneratorService
         var templateText = await File.ReadAllTextAsync(templatePath);
         var template = Template.Parse(templateText);
 
+        // 主键
         var pk = request.Columns.First(c => c.IsPrimaryKey);
         var camelName = char.ToLower(request.ModuleName[0]) + request.ModuleName.Substring(1);
         var pkCamelName = char.ToLower(pk.ColumnName[0]) + pk.ColumnName.Substring(1);
 
-        // 构造 Columns 的 ScriptObject 列表
+        // 需要排除的自动生成字段（不显示在表单中）
+        var excludeFromForm = new[] { "CreateTime", "UpdateTime", "CreatedAt", "UpdatedAt" };
+
+        // 构造 Columns 的 ScriptArray
         var columnsList = new ScriptArray();
         foreach (var col in request.Columns)
         {
             columnsList.Add(ToColumnScriptObject(col));
         }
 
+        // 列表列（ShowInList）
         var listColumns = new ScriptArray();
         foreach (var col in request.Columns.Where(c => c.ShowInList))
         {
             listColumns.Add(ToColumnScriptObject(col));
         }
 
+        // 表单列（ShowInForm 且非主键 且非自动字段）
         var formColumns = new ScriptArray();
-        foreach (var col in request.Columns.Where(c => c.ShowInForm && !c.IsPrimaryKey))
+        foreach (var col in request.Columns.Where(c =>
+            c.ShowInForm && !c.IsPrimaryKey && !excludeFromForm.Contains(c.ColumnName)))
         {
             formColumns.Add(ToColumnScriptObject(col));
         }
 
-        // ✅ 用 ScriptObject 显式传参
+        // 默认可见列（用于列设置的初始化）
+        var defaultVisible = string.Join(", ", request.Columns
+            .Where(c => c.ShowInList)
+            .Select(c => $"'{c.CamelName}'"));
+
+        // 构造 ScriptObject
         var scriptObject = new ScriptObject();
         scriptObject["TableName"] = request.TableName;
         scriptObject["ModuleName"] = request.ModuleName;
@@ -164,6 +176,7 @@ public class GeneratorService : IGeneratorService
         scriptObject["PkName"] = pk.ColumnName;
         scriptObject["PkType"] = pk.CSharpType;
         scriptObject["PkCamelName"] = pkCamelName;
+        scriptObject["DefaultVisible"] = defaultVisible;
         scriptObject["Columns"] = columnsList;
         scriptObject["ListColumns"] = listColumns;
         scriptObject["FormColumns"] = formColumns;

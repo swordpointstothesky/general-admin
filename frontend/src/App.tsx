@@ -8,6 +8,8 @@ import Logs from './pages/Logs';
 import Profile from './pages/Profile';
 import Generator from './pages/Generator';
 import Students from './pages/Students';
+import Teachers from './pages/Teachers';
+import Dict from './pages/Dict';
 import Layout from './components/Layout';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -40,6 +42,11 @@ function App() {
                                 <Route path="/profile" element={<Profile />} />
                                 <Route path="/generator" element={<Generator />} />
                                 <Route path="/students" element={<Students />} />
+                                <Route path="/teachers" element={<Teachers />} />
+                                <Route path="/dict" element={<Dict />} />
+                                // 仪表盘子页面
+                                <Route path="/dashboard/monitor" element={<div className="p-6"><h1 className="text-xl font-bold">监控页</h1><p className="text-muted-foreground mt-2">开发中...</p></div>} />
+                                <Route path="/dashboard/workplace" element={<div className="p-6"><h1 className="text-xl font-bold">工作台</h1><p className="text-muted-foreground mt-2">开发中...</p></div>} />
                             </Route>
                             <Route path="*" element={<Navigate to="/login" replace />} />
                         </Routes>
