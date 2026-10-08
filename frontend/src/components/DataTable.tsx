@@ -74,6 +74,7 @@ interface DataTableProps<T> {
 
     // 空状态
     emptyText?: string;
+
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -150,10 +151,13 @@ export function DataTable<T extends Record<string, any>>({
         const { page, pageSize, total, pageSizeOptions = [10, 20, 50, 100], onPageChange } = pagination;
 
         return (
-            <div className="flex items-center justify-between px-4 py-3 hrink-0">
-                <div className="text-sm text-muted-foreground">
+            <div className="relative flex items-center justify-center px-4 py-3">
+                {/* 左侧：统计（绝对定位，不影响居中）*/}
+                <div className="absolute left-4 text-sm text-muted-foreground">
                     共 <strong>{total}</strong> 条
                 </div>
+
+                {/* 中间：分页控件 */}
                 <div className="flex items-center gap-4">
                     {/* 每页条数 */}
                     <div className="flex items-center gap-2 text-sm">
@@ -203,6 +207,9 @@ export function DataTable<T extends Record<string, any>>({
                         </Button>
                     </div>
                 </div>
+
+                {/* 右侧：预留空间，避免居中偏移（可选）*/}
+                <div className="absolute right-4 w-24" />
             </div>
         );
     };

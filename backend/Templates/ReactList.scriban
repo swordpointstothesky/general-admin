@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import api from '@/api';
 import { DataTable } from '@/components/DataTable';
 import type { ColumnConfig } from '@/components/DataTable';
@@ -6,9 +7,21 @@ import { EntityFormDialog } from '@/components/EntityFormDialog';
 import type { FormField } from '@/components/EntityFormDialog';
 import { ColumnSettings } from '@/components/ColumnSettings';
 import type { ColumnSettingItem } from '@/components/ColumnSettings';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { exportToExcel } from '@/lib/export';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { DictSelect } from '@/components/DictSelect';
+import { useDict } from '@/hooks/useDict';
+import { getBadgeColor } from '@/lib/colorMap';
+import { getFullUrl } from '@/lib/upload';
+import { FileUpload } from '@/components/FileUpload';
+import { DatePicker } from '@/components/DatePicker';
+import { Switch } from '@/components/ui/switch';
+import { Image as ImageIcon, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -19,13 +32,11 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { exportToExcel } from '@/lib/export';
-import { useFullscreen } from '@/hooks/useFullscreen';
 import {
-    Plus, Trash2, RefreshCw, Settings2, Maximize2, Pencil, Download, Upload, Loader2,
+    Plus, Trash2, Upload, RefreshCw, Settings2, Maximize2, Pencil, Loader2, Download,
 } from 'lucide-react';
 
-// ========== 类型定义 ==========
+// ========== 类型 ==========
 interface {{ ModuleName }} {
 {{~ for col in Columns ~}}
     {{ col.CamelName }}: {{ col.TsType }};
@@ -39,6 +50,7 @@ export default function {{ ModuleName }}s() {
     const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
 
     // 查询
+    const [keyword, setKeyword] = useState('');
     const [filters, setFilters] = useState<Record<string, string>>({});
     const [filterExpanded, setFilterExpanded] = useState(false);
 
@@ -58,23 +70,44 @@ export default function {{ ModuleName }}s() {
     // 删除
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deletingItem, setDeletingItem] = useState<{{ ModuleName }} | null>(null);
-    const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
+
+    // 批量删除
+    const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+
+    // 全屏
+    const tableFullscreen = useFullscreen<HTMLDivElement>();
 
     // 列设置
     const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
     const defaultVisible = [{{ DefaultVisible }}];
+
     const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() => {
         const saved = localStorage.getItem('{{ CamelName }}-columns-visible');
-        return saved ? JSON.parse(saved) : defaultVisible;
-    });
-    const [columnOrder, setColumnOrder] = useState<string[]>(() => {
-        const saved = localStorage.getItem('{{ CamelName }}-columns-order');
-        return saved ? JSON.parse(saved) : defaultVisible;
+        if (!saved) return defaultVisible;
+        const parsed: string[] = JSON.parse(saved);
+        // ✅ 自动补全 defaultVisible 里新增的字段
+        return Array.from(new Set([...parsed, ...defaultVisible]));
     });
 
-    // 全屏
-    const tableFullscreen = useFullscreen<HTMLDivElement>();
+    const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+        const saved = localStorage.getItem('{{ CamelName }}-columns-order');
+        if (!saved) return defaultVisible;
+        const parsed: string[] = JSON.parse(saved);
+        // ✅ 自动补全
+        return Array.from(new Set([...parsed, ...defaultVisible]));
+    });
+
+    // ========== ✅ 字典加载 ==========
+{{~ for col in DictColumns ~}}
+    const { options: {{ col.CamelName }}Options } = useDict('{{ col.DictType }}');
+{{~ end ~}}
+
+    // ========== ✅ value → label 映射 ==========
+{{~ for col in DictColumns ~}}
+    const {{ col.CamelName }}Label = (value: string) =>
+        {{ col.CamelName }}Options.find((o) => o.value === value)?.label || value;
+{{~ end ~}}
 
     // ========== 获取数据 ==========
     const fetchItems = async () => {
@@ -83,6 +116,8 @@ export default function {{ ModuleName }}s() {
             const res = await api.get('/api/{{ CamelName }}s');
             setItems(res.data);
             setPagination((p) => ({ ...p, total: res.data.length }));
+        } catch {
+            toast.error('加载数据失败');
         } finally {
             setLoading(false);
         }
@@ -92,12 +127,50 @@ export default function {{ ModuleName }}s() {
         fetchItems();
     }, []);
 
-    // ========== 筛选 + 排序 + 分页 ==========
-    const filteredData = items.filter((item: any) =>
-        Object.entries(filters).every(([key, value]) =>
-            !value || String(item[key] ?? '').toLowerCase().includes(value.toLowerCase())
-        )
-    );
+    // ========== ✅ 筛选（模糊 + 精确）+ 排序 + 分页 ==========
+    const filteredData = items
+        // ===== 1. 模糊搜索：匹配所有字段 =====
+        .filter((item: any) => {
+            if (!keyword) return true;
+            const kw = keyword.toLowerCase();
+
+            return Object.entries(item).some(([key, v]) => {
+                const str = String(v ?? '').toLowerCase();
+                if (str.includes(kw)) return true;
+
+                // 字典字段：也匹配 label
+{{~ for col in DictColumns ~}}
+                if (key === '{{ col.CamelName }}') {
+                    const label = {{ col.CamelName }}Options.find((o) => o.value === v)?.label || '';
+                    if (label.toLowerCase().includes(kw)) return true;
+                }
+{{~ end ~}}
+                return false;
+            });
+        })
+        // ===== 2. 精确筛选 =====
+        .filter((item: any) =>
+            Object.entries(filters).every(([key, filterValue]) => {
+                if (!filterValue) return true;
+
+                // 字典字段：同时匹配 value 和 label
+{{~ for col in DictColumns ~}}
+                if (key === '{{ col.CamelName }}') {
+                    const itemValue = String(item[key] ?? '');
+                    const label = {{ col.CamelName }}Options.find((o) => o.value === itemValue)?.label || '';
+                    return (
+                        itemValue === filterValue ||
+                        label === filterValue ||
+                        label.includes(filterValue)
+                    );
+                }
+{{~ end ~}}
+                // 普通字段
+                return String(item[key] ?? '')
+                    .toLowerCase()
+                    .includes(filterValue.toLowerCase());
+            })
+        );
 
     const sortedData = [...filteredData].sort((a: any, b: any) => {
         const av = a[sortField];
@@ -122,18 +195,62 @@ export default function {{ ModuleName }}s() {
     };
 
     // ========== 列定义 ==========
-    const allColumns: ColumnConfig<{{ ModuleName }}>[] = [
+    const allColumns: (ColumnConfig<{{ ModuleName }}> & { fixed?: boolean })[] = [
+        { key: '{{ PkCamelName }}', title: '{{ PkName }}', width: '80px', sortable: true },
 {{~ for col in ListColumns ~}}
+{{~ if !col.IsPrimaryKey ~}}
         {
             key: '{{ col.CamelName }}',
             title: '{{ col.DisplayName }}',
-{{~ if col.IsPrimaryKey ~}}
-            width: '80px',
-{{~ end ~}}
-{{~ if col.CSharpType == "int" || col.CSharpType == "int?" || col.CSharpType == "long" || col.CSharpType == "long?" || col.CSharpType == "decimal" || col.CSharpType == "decimal?" ~}}
+{{~ if col.IsDictField ~}}
+            render: (value) => {
+                const opt = {{ col.CamelName }}Options.find((o) => o.value === value);
+                return opt?.color ? (
+                    <Badge variant="outline" className={cn('font-normal', getBadgeColor(opt.color))}>
+                        {opt.label}
+                    </Badge>
+                ) : (
+                    <Badge variant="secondary" className="font-normal">
+                        {{{ col.CamelName }}Label(value)}
+                    </Badge>
+                );
+            },
+{{~ else if col.InputType == "image" ~}}
+            render: (value) => value ? (
+                <img
+                    src={getFullUrl(value)}
+                    alt="{{ col.DisplayName }}"
+                    className="h-10 w-10 rounded-md object-cover border"
+                />
+            ) : (
+                <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                </div>
+            ),
+{{~ else if col.InputType == "switch" ~}}
+            render: (value) => value ? (
+                <Badge variant="default" className="font-normal">是</Badge>
+            ) : (
+                <Badge variant="secondary" className="font-normal">否</Badge>
+            ),
+{{~ else if col.InputType == "date" || col.CSharpType == "DateTime" || col.CSharpType == "DateTime?" || col.CSharpType == "DateOnly" || col.CSharpType == "DateOnly?" ~}}
+            render: (v) => (v ? new Date(v).toLocaleDateString('zh-CN') : '-'),
+            sortable: true,
+{{~ else if col.CSharpType == "int" || col.CSharpType == "int?" || col.CSharpType == "long" || col.CSharpType == "long?" || col.CSharpType == "decimal" || col.CSharpType == "decimal?" ~}}
             sortable: true,
 {{~ end ~}}
         },
+{{~ end ~}}
+{{~ end ~}}
+    ];
+
+    // 导出列
+    const exportColumns = [
+        { key: '{{ PkCamelName }}', title: '{{ PkName }}' },
+{{~ for col in ListColumns ~}}
+{{~ if !col.IsPrimaryKey ~}}
+        { key: '{{ col.CamelName }}', title: '{{ col.DisplayName }}' },
+{{~ end ~}}
 {{~ end ~}}
     ];
 
@@ -142,6 +259,24 @@ export default function {{ ModuleName }}s() {
         .map((key) => allColumns.find((c) => c.key === key)!)
         .filter(Boolean);
 
+    // ========== 表单字段 ==========
+    const formFields: FormField[] = [
+{{~ for col in FormColumns ~}}
+        {
+            key: '{{ col.CamelName }}',
+            label: '{{ col.DisplayName }}',
+{{~ if col.IsDictField ~}}
+            type: 'select',
+            options: {{ col.CamelName }}Options.map((o) => ({ label: o.label, value: o.value })),
+{{~ else ~}}
+            type: '{{ col.InputType }}',
+{{~ end ~}}
+            required: {{ if col.IsNullable }}false{{ else }}true{{ end }},
+            placeholder: '请输入{{ col.DisplayName }}',
+        },
+{{~ end ~}}
+    ];
+
     // 列设置项
     const columnSettingItems: ColumnSettingItem[] = columnOrder.map((key) => {
         const col = allColumns.find((c) => c.key === key)!;
@@ -149,6 +284,7 @@ export default function {{ ModuleName }}s() {
             key: col.key,
             title: col.title,
             visible: visibleColumnKeys.includes(col.key),
+            fixed: col.fixed,
         };
     });
 
@@ -161,59 +297,45 @@ export default function {{ ModuleName }}s() {
         localStorage.setItem('{{ CamelName }}-columns-visible', JSON.stringify(visible));
     };
 
-    // ========== 表单字段 ==========
-    const formFields: FormField[] = [
-{{~ for col in FormColumns ~}}
-        {
-            key: '{{ col.CamelName }}',
-            label: '{{ col.DisplayName }}',
-{{~ if col.CSharpType == "int" || col.CSharpType == "int?" || col.CSharpType == "long" || col.CSharpType == "long?" || col.CSharpType == "decimal" || col.CSharpType == "decimal?" ~}}
-            type: 'number',
-{{~ end ~}}
-        },
-{{~ end ~}}
-    ];
+    // ========== 重置 ==========
+    const handleReset = () => {
+        setKeyword('');
+        setFilters({});
+        setPagination((p) => ({ ...p, page: 1 }));
+    };
 
-    // ========== 导出列 ==========
-    const exportColumns = [
-{{~ for col in ListColumns ~}}
-        { key: '{{ col.CamelName }}', title: '{{ col.DisplayName }}' },
-{{~ end ~}}
-    ];
-
-    // ========== 新增 ==========
+    // ========== 新增 / 编辑 / 保存 / 删除 ==========
     const handleOpenCreate = () => {
         setEditingItem(null);
         setFormData({});
         setFormOpen(true);
     };
 
-    // ========== 编辑 ==========
     const handleOpenEdit = (item: {{ ModuleName }}) => {
         setEditingItem(item);
         setFormData({ ...item });
         setFormOpen(true);
     };
 
-    // ========== 保存 ==========
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
             if (editingItem) {
                 await api.put(`/api/{{ CamelName }}s/${(editingItem as any).{{ PkCamelName }}}`, formData);
+                toast.success('修改成功');
             } else {
                 await api.post('/api/{{ CamelName }}s', formData);
+                toast.success('创建成功');
             }
             setFormOpen(false);
             fetchItems();
         } catch (err: any) {
-            alert(err.response?.data?.message || '操作失败');
+            toast.error(err.response?.data?.message || '操作失败');
         } finally {
             setSubmitting(false);
         }
     };
 
-    // ========== 删除 ==========
     const handleOpenDelete = (item: {{ ModuleName }}) => {
         setDeletingItem(item);
         setDeleteOpen(true);
@@ -224,81 +346,103 @@ export default function {{ ModuleName }}s() {
         setDeleting(true);
         try {
             await api.delete(`/api/{{ CamelName }}s/${(deletingItem as any).{{ PkCamelName }}}`);
+            toast.success('删除成功');
             setDeleteOpen(false);
             setDeletingItem(null);
             fetchItems();
         } catch (err: any) {
-            alert(err.response?.data?.message || '删除失败');
+            toast.error(err.response?.data?.message || '删除失败');
         } finally {
             setDeleting(false);
         }
     };
 
-    // ========== 批量删除 ==========
     const handleBatchDelete = async () => {
         setDeleting(true);
         try {
-            await Promise.all(selectedKeys.map((key) => api.delete(`/api/{{ CamelName }}s/${key}`)));
+            await Promise.all(
+                selectedKeys.map((key) => api.delete(`/api/{{ CamelName }}s/${key}`))
+            );
+            toast.success(`已删除 ${selectedKeys.length} 条数据`);
             setBatchDeleteOpen(false);
             setSelectedKeys([]);
             fetchItems();
         } catch (err: any) {
-            alert(err.response?.data?.message || '批量删除失败');
+            toast.error(err.response?.data?.message || '批量删除失败');
         } finally {
             setDeleting(false);
         }
     };
 
-    // ========== 导出 ==========
     const handleExportAll = () => {
         exportToExcel(sortedData, exportColumns, '{{ DisplayName }}列表', '{{ DisplayName }}');
     };
 
     const handleExportSelected = () => {
-        const selected = items.filter((s: any) => selectedKeys.includes(s.{{ PkCamelName }}));
+        const selected = items.filter((s: any) =>
+            selectedKeys.includes(s.{{ PkCamelName }})
+        );
         exportToExcel(selected, exportColumns, '{{ DisplayName }}列表_选中', '{{ DisplayName }}');
     };
 
     return (
         <div className="flex flex-col h-full gap-3">
             {/* ===== 查询表单 ===== */}
-            <div className="rounded-lg bg-background p-4 shrink-0">
-                <div className="flex flex-wrap gap-4">
-{{~ for col in FormColumns ~}}
-                    <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{{ col.DisplayName }}</Label>
+            <div className="rounded-lg bg-background p-4 shrink-0 space-y-3">
+                {/* 第一行：模糊搜索 + 操作按钮 */}
+                <div className="flex items-center gap-3">
+                    <div className="relative w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="请输入{{ col.DisplayName }}"
-                            value={filters.{{ col.CamelName }} || ''}
-                            onChange={(e) => setFilters({ ...filters, {{ col.CamelName }}: e.target.value })}
-                            className="w-48 h-10"
+                            placeholder="搜索所有字段..."
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            className="h-10 pl-9"
                         />
                     </div>
-{{~ end ~}}
-                    <div className="space-y-1.5 ml-auto">
-                        <Label className="text-xs text-muted-foreground invisible">占位</Label>
-                        <div className="flex items-center gap-2">
-                            <Button className="h-10" onClick={fetchItems}>查询</Button>
-                            <Button
-                                variant="outline"
-                                className="h-10"
-                                onClick={() => {
-                                    setFilters({});
-                                    setPagination((p) => ({ ...p, page: 1 }));
-                                }}
-                            >
-                                重置
-                            </Button>
-                            <button
-                                type="button"
-                                onClick={() => setFilterExpanded(!filterExpanded)}
-                                className="h-10 px-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                展开 {filterExpanded ? '▲' : '▼'}
-                            </button>
-                        </div>
-                    </div>
+
+                    <Button className="h-10" onClick={fetchItems}>查询</Button>
+                    <Button variant="outline" className="h-10" onClick={handleReset}>
+                        重置
+                    </Button>
+
+                    <button
+                        type="button"
+                        onClick={() => setFilterExpanded(!filterExpanded)}
+                        className="h-10 px-3 ml-auto inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        {filterExpanded ? '收起' : '展开'} {filterExpanded ? '▲' : '▼'}
+                    </button>
                 </div>
+
+                {/* 第二行：精确筛选（可展开） */}
+                {filterExpanded && (
+                    <div className="flex flex-wrap gap-4 pt-3 border-t">
+{{~ for col in FormColumns ~}}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">{{ col.DisplayName }}</Label>
+{{~ if col.IsDictField ~}}
+                            <DictSelect
+                                value={filters.{{ col.CamelName }} || ''}
+                                onChange={(v) => setFilters({ ...filters, {{ col.CamelName }}: v })}
+                                options={ {{ col.CamelName }}Options }
+                                allowAll
+                                className="w-40 h-10"
+                            />
+{{~ else if col.InputType == "image" || col.InputType == "switch" ~}}
+                            {/* 图片/开关字段不参与精确筛选 */}
+{{~ else ~}}
+                            <Input
+                                placeholder="请输入{{ col.DisplayName }}"
+                                value={filters.{{ col.CamelName }} || ''}
+                                onChange={(e) => setFilters({ ...filters, {{ col.CamelName }}: e.target.value })}
+                                className="w-40 h-10"
+                            />
+{{~ end ~}}
+                        </div>
+{{~ end ~}}
+                    </div>
+                )}
             </div>
 
             {/* ===== 数据表格 ===== */}
@@ -315,7 +459,10 @@ export default function {{ ModuleName }}s() {
                     onSelectionChange={setSelectedKeys}
                     sortField={sortField}
                     sortOrder={sortOrder}
-                    onSortChange={(field, order) => { setSortField(field); setSortOrder(order); }}
+                    onSortChange={(field, order) => {
+                        setSortField(field);
+                        setSortOrder(order);
+                    }}
                     pagination={tablePagination}
                     toolbar={
                         <>
@@ -323,13 +470,22 @@ export default function {{ ModuleName }}s() {
                                 <Plus className="mr-1.5 h-4 w-4" />
                                 新增
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => setBatchDeleteOpen(true)} disabled={selectedKeys.length === 0}>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setBatchDeleteOpen(true)}
+                                disabled={selectedKeys.length === 0}
+                            >
                                 <Trash2 className="mr-1.5 h-4 w-4" />
                                 删除
                                 {selectedKeys.length > 0 && ` (${selectedKeys.length})`}
                             </Button>
                             {selectedKeys.length > 0 && (
-                                <Button size="sm" variant="outline" onClick={handleExportSelected}>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleExportSelected}
+                                >
                                     <Download className="mr-1.5 h-4 w-4" />
                                     导出选中 ({selectedKeys.length})
                                 </Button>
@@ -349,20 +505,42 @@ export default function {{ ModuleName }}s() {
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={fetchItems}>
                                 <RefreshCw className="h-4 w-4" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={tableFullscreen.toggle}>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={tableFullscreen.toggle}
+                                title={tableFullscreen.isFullscreen ? '退出全屏' : '全屏'}
+                            >
                                 <Maximize2 className="h-4 w-4" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setColumnSettingsOpen(true)}>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => setColumnSettingsOpen(true)}
+                                title="列设置"
+                            >
                                 <Settings2 className="h-4 w-4" />
                             </Button>
                         </>
                     }
                     actions={(record) => (
                         <>
-                            <Button variant="ghost" size="sm" className="text-primary h-8 px-2" onClick={() => handleOpenEdit(record)}>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary h-8 px-2"
+                                onClick={() => handleOpenEdit(record)}
+                            >
                                 <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-destructive h-8 px-2" onClick={() => handleOpenDelete(record)}>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive h-8 px-2"
+                                onClick={() => handleOpenDelete(record)}
+                            >
                                 <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                         </>
@@ -370,19 +548,12 @@ export default function {{ ModuleName }}s() {
                 />
             </div>
 
-            {/* ===== 列设置 ===== */}
-            <ColumnSettings
-                open={columnSettingsOpen}
-                onOpenChange={setColumnSettingsOpen}
-                columns={columnSettingItems}
-                onSave={handleSaveColumnSettings}
-            />
-
-            {/* ===== 新增/编辑 ===== */}
+            {/* ===== 新增/编辑弹窗 ===== */}
             <EntityFormDialog
                 open={formOpen}
                 onOpenChange={setFormOpen}
                 title={editingItem ? '编辑{{ DisplayName }}' : '新增{{ DisplayName }}'}
+                description={editingItem ? '修改{{ DisplayName }}信息' : '填写{{ DisplayName }}信息'}
                 fields={formFields}
                 formData={formData}
                 onFormChange={setFormData}
@@ -391,7 +562,7 @@ export default function {{ ModuleName }}s() {
                 submitText={editingItem ? '保存修改' : '创建'}
             />
 
-            {/* ===== 删除确认 ===== */}
+            {/* ===== 单条删除确认 ===== */}
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -402,7 +573,11 @@ export default function {{ ModuleName }}s() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmDelete} disabled={deleting} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogAction
+                            onClick={handleConfirmDelete}
+                            disabled={deleting}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
                             {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             确认删除
                         </AlertDialogAction>
@@ -410,24 +585,35 @@ export default function {{ ModuleName }}s() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* ===== 批量删除 ===== */}
+            {/* ===== 批量删除确认 ===== */}
             <AlertDialog open={batchDeleteOpen} onOpenChange={setBatchDeleteOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>确认批量删除</AlertDialogTitle>
                         <AlertDialogDescription>
-                            确定要删除选中的 <strong>{selectedKeys.length}</strong> 条数据吗？
+                            确定要删除选中的 <strong>{selectedKeys.length}</strong> 条数据吗？此操作不可撤销。
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleBatchDelete} disabled={deleting} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogAction
+                            onClick={handleBatchDelete}
+                            disabled={deleting}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
                             {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             确认删除
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <ColumnSettings
+                open={columnSettingsOpen}
+                onOpenChange={setColumnSettingsOpen}
+                columns={columnSettingItems}
+                onSave={handleSaveColumnSettings}
+            />
         </div>
     );
 }

@@ -15,14 +15,13 @@ import {
     SidebarMenuItem,
     SidebarProvider,
 } from '@/components/ui/sidebar';
-import {
-    LogOut,
-    User as UserIcon,
-} from 'lucide-react';
+import { LogOut, User as UserIcon } from 'lucide-react';
 import { Header } from './layout/Header';
 import { TabBar } from './layout/TabBar';
 import type { TabItem } from './layout/TabBar';
 import { SidebarMenuTree } from './layout/SidebarMenuTree';
+import { useSettings } from '@/contexts/SettingsContext';
+import { cn } from '@/lib/utils';
 
 // ========== 菜单类型 ==========
 interface MenuItem {
@@ -55,8 +54,11 @@ function parseUserFromToken() {
 
 // ========== 主布局 ==========
 export default function Layout() {
+    const { settings } = useSettings();
+
     const [menus, setMenus] = useState<MenuItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [avatar, setAvatar] = useState<string | null>(null);
     const [tabs, setTabs] = useState<TabItem[]>(() => {
         const saved = localStorage.getItem(TABS_STORAGE_KEY);
         return saved ? JSON.parse(saved) : [];
@@ -65,7 +67,7 @@ export default function Layout() {
     const navigate = useNavigate();
     const userInfo = parseUserFromToken();
 
-    // 获取菜单
+    // ========== 获取菜单 ==========
     useEffect(() => {
         const fetchMenus = async () => {
             try {
@@ -80,7 +82,28 @@ export default function Layout() {
         fetchMenus();
     }, []);
 
-    // 路由变化时自动添加标签
+    // ========== 获取头像 + 监听更新 ==========
+    useEffect(() => {
+        const fetchAvatar = () => {
+            api.get('/api/profile').then((res) => {
+                setAvatar(res.data.avatar || null);
+            }).catch(() => { });
+        };
+
+        fetchAvatar();
+
+        const handleAvatarUpdate = (e: Event) => {
+            const customEvent = e as CustomEvent<string | null>;
+            setAvatar(customEvent.detail);
+        };
+
+        window.addEventListener('avatar-updated', handleAvatarUpdate);
+        return () => {
+            window.removeEventListener('avatar-updated', handleAvatarUpdate);
+        };
+    }, []);
+
+    // ========== 路由变化时自动添加标签 ==========
     useEffect(() => {
         const findMenuName = (items: MenuItem[], path: string): string | null => {
             for (const item of items) {
@@ -107,21 +130,20 @@ export default function Layout() {
         });
     }, [location.pathname, menus]);
 
-    // 退出登录
+    // ========== 退出登录 ==========
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem(TABS_STORAGE_KEY);
         window.location.href = '/login';
     };
 
-    // 关闭标签
+    // ========== Tab 操作 ==========
     const handleCloseTab = (key: string) => {
         setTabs((prev) => {
             const idx = prev.findIndex((t) => t.key === key);
             const newTabs = prev.filter((t) => t.key !== key);
             localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(newTabs));
 
-            // 如果关闭的是当前标签，跳转到相邻标签
             if (key === location.pathname) {
                 const next = newTabs[idx - 1] || newTabs[0];
                 if (next) navigate(next.key);
@@ -131,7 +153,6 @@ export default function Layout() {
         });
     };
 
-    // 关闭其他
     const handleCloseOthers = (key: string) => {
         const newTabs = tabs.filter((t) => t.key === key);
         setTabs(newTabs);
@@ -139,14 +160,12 @@ export default function Layout() {
         if (key !== location.pathname) navigate(key);
     };
 
-    // 关闭所有
     const handleCloseAll = () => {
         setTabs([]);
         localStorage.removeItem(TABS_STORAGE_KEY);
         navigate('/dashboard');
     };
 
-    // 关闭左侧
     const handleCloseLeft = (key: string) => {
         const idx = tabs.findIndex((t) => t.key === key);
         if (idx <= 0) return;
@@ -155,7 +174,6 @@ export default function Layout() {
         localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(newTabs));
     };
 
-    // 关闭右侧
     const handleCloseRight = (key: string) => {
         const idx = tabs.findIndex((t) => t.key === key);
         if (idx === -1) return;
@@ -163,140 +181,148 @@ export default function Layout() {
         setTabs(newTabs);
         localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(newTabs));
 
-        // 如果当前页面被关闭了，跳转到 key 对应页
         if (location.pathname !== key) {
             navigate(key);
         }
     };
 
-    // 重新加载（相当于刷新当前页面）
     const handleReload = (key: string) => {
         if (key === location.pathname) {
-            // 当前页面：重新挂载（通过 key 变化触发）
-            navigate(0 as any); // React Router 的刷新技巧
+            navigate(0 as any);
         } else {
             navigate(key);
         }
     };
 
-    // 内容全屏
     const handleFullscreen = (key: string) => {
-        // 如果目标 Tab 不是当前 Tab，先跳转
         if (key !== location.pathname) {
             navigate(key);
         }
 
-        // 延迟一点，等 React 渲染完成
         setTimeout(() => {
             const el = document.getElementById('tab-content-area');
+            if (!el) return;
 
-            if (!el) {
-                console.warn('未找到内容区元素');
-                return;
-            }
-
-            // 如果已经在全屏，先退出
             if (document.fullscreenElement) {
                 document.exitFullscreen();
                 return;
             }
 
-            // 请求内容区全屏
             el.requestFullscreen().catch((err) => {
                 console.error('全屏失败:', err);
             });
         }, 150);
     };
+
     return (
-        <SidebarProvider>
+        <SidebarProvider
+            style={{
+                '--sidebar-width': `${settings.sidebarWidth}px`,
+                '--sidebar-width-icon': `${settings.sidebarCollapseWidth}px`,
+            } as React.CSSProperties}>
             <div
-                className="flex w-full h-screen gap-3"
+                className={cn(
+                    'flex w-full h-screen',
+                    settings.gapLayout ? 'gap-3' : 'gap-0'
+                )}
                 style={{ backgroundColor: 'var(--content-bg)' }}
             >
                 {/* ===== 侧边栏 ===== */}
-                <Sidebar>
-                    <SidebarHeader>
-                        <div className="flex items-center gap-2 px-2 py-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                                <span className="text-sm font-bold">G</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-sm font-semibold">通用后台</span>
-                                <span className="text-xs text-muted-foreground">Admin</span>
-                            </div>
-                        </div>
-                    </SidebarHeader>
+                {settings.showSidebar && (
+                    <Sidebar>
+                        <SidebarHeader>
+                            {settings.showLogo && (
+                                <div className="flex items-center gap-2 px-2 py-2">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                                        <span className="text-sm font-bold">G</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-semibold">通用后台</span>
+                                        <span className="text-xs text-muted-foreground">Admin</span>
+                                    </div>
+                                </div>
+                            )}
+                        </SidebarHeader>
 
-                    <SidebarContent>
-                        <SidebarGroup>
-                            <SidebarGroupLabel>导航菜单</SidebarGroupLabel>
-                            <SidebarGroupContent>
-                                {loading ? (
-                                    <SidebarMenu>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton disabled>
-                                                <span className="text-sm text-muted-foreground">加载中...</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                    </SidebarMenu>
-                                ) : menus.length === 0 ? (
-                                    <SidebarMenu>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton disabled>
-                                                <span className="text-sm text-muted-foreground">暂无菜单</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                    </SidebarMenu>
-                                ) : (
-                                    <SidebarMenuTree menus={menus} />
-                                )}
-                            </SidebarGroupContent>
-                        </SidebarGroup>
-                    </SidebarContent>
+                        <SidebarContent>
+                            <SidebarGroup>
+                                <SidebarGroupLabel>导航菜单</SidebarGroupLabel>
+                                <SidebarGroupContent>
+                                    {loading ? (
+                                        <SidebarMenu>
+                                            <SidebarMenuItem>
+                                                <SidebarMenuButton disabled>
+                                                    <span className="text-sm text-muted-foreground">加载中...</span>
+                                                </SidebarMenuButton>
+                                            </SidebarMenuItem>
+                                        </SidebarMenu>
+                                    ) : menus.length === 0 ? (
+                                        <SidebarMenu>
+                                            <SidebarMenuItem>
+                                                <SidebarMenuButton disabled>
+                                                    <span className="text-sm text-muted-foreground">暂无菜单</span>
+                                                </SidebarMenuButton>
+                                            </SidebarMenuItem>
+                                        </SidebarMenu>
+                                    ) : (
+                                        <SidebarMenuTree menus={menus} />
+                                    )}
+                                </SidebarGroupContent>
+                            </SidebarGroup>
+                        </SidebarContent>
 
-                    <SidebarFooter>
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    isActive={location.pathname === '/profile'}
-                                    render={<Link to="/profile" />}
-                                >
-                                    <UserIcon />
-                                    <span>个人中心</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton onClick={handleLogout}>
-                                    <LogOut />
-                                    <span>退出登录</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarFooter>
-                </Sidebar>
+                        <SidebarFooter>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton
+                                        isActive={location.pathname === '/profile'}
+                                        render={<Link to="/profile" />}
+                                    >
+                                        <UserIcon />
+                                        <span>个人中心</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={handleLogout}>
+                                        <LogOut />
+                                        <span>退出登录</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        </SidebarFooter>
+                    </Sidebar>
+                )}
 
                 {/* ===== 主内容区 ===== */}
-                <SidebarInset className="flex flex-col h-screen overflow-hidden mr-3">
-                    <Header
-                        username={userInfo.username}
-                        roles={userInfo.roles}
-                        onLogout={handleLogout}
-                    />
-                    <TabBar
-                        tabs={tabs}
-                        activeKey={location.pathname}
-                        onClose={handleCloseTab}
-                        onCloseOthers={handleCloseOthers}
-                        onCloseLeft={handleCloseLeft}
-                        onCloseRight={handleCloseRight}
-                        onCloseAll={handleCloseAll}
-                        onReload={handleReload}
-                        onFullscreen={handleFullscreen}
-                    />
+                <SidebarInset className={cn(
+                    'flex flex-col h-screen overflow-hidden',
+                    settings.gapLayout ? 'mr-3' : 'mr-0'
+                )}>
+                    {settings.showHeader && (
+                        <Header
+                            username={userInfo.username}
+                            roles={userInfo.roles}
+                            onLogout={handleLogout}
+                            avatar={avatar}
+                        />
+                    )}
+                    {settings.showTabs && (
+                        <TabBar
+                            tabs={tabs}
+                            activeKey={location.pathname}
+                            onClose={handleCloseTab}
+                            onCloseOthers={handleCloseOthers}
+                            onCloseLeft={handleCloseLeft}
+                            onCloseRight={handleCloseRight}
+                            onCloseAll={handleCloseAll}
+                            onReload={handleReload}
+                            onFullscreen={handleFullscreen}
+                        />
+                    )}
                     <div
                         id="tab-content-area"
                         data-tab-content
-                        className="flex-1 overflow-hidden pt-3"
+                        className="flex-1 overflow-hidden py-3"
                         style={{ backgroundColor: 'var(--content-bg)' }}
                     >
                         <Outlet />

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FileUpload } from '@/components/FileUpload';
+import { AvatarUpload } from '@/components/AvatarUpload';
+
 import {
     Card,
     CardContent,
@@ -18,6 +22,7 @@ interface Profile {
     id: number;
     username: string;
     email: string | null;
+    avatar: string | null;
     createTime: string;
     roles: string[];
 }
@@ -30,6 +35,8 @@ export default function Profile() {
     const [email, setEmail] = useState('');
     const [savingEmail, setSavingEmail] = useState(false);
 
+
+
     // 密码修改
     const [passwordForm, setPasswordForm] = useState({
         oldPassword: '',
@@ -39,6 +46,9 @@ export default function Profile() {
     const [savingPassword, setSavingPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
 
+    // 文件上传
+    const [avatar, setAvatar] = useState<string | null>(null);
+
     const navigate = useNavigate();
 
     // ========== 获取个人信息 ==========
@@ -46,8 +56,10 @@ export default function Profile() {
         setLoading(true);
         try {
             const response = await api.get('/api/profile');
+            console.log('个人信息', response.data);
             setProfile(response.data);
             setEmail(response.data.email || '');
+            setAvatar(response.data.avatar || null);
         } catch (err: any) {
             alert(err.response?.data?.message || '获取个人信息失败');
         } finally {
@@ -72,6 +84,20 @@ export default function Profile() {
             setSavingEmail(false);
         }
     };
+
+    // ========== 更新头像 ==========
+    const handleSaveAvatar = async (url: string | null) => {
+    setAvatar(url);
+    try {
+        await api.put('/api/profile', { avatar: url });
+        toast.success('头像已更新');
+
+        // ✅ 通知 Layout 刷新头像
+        window.dispatchEvent(new CustomEvent('avatar-updated', { detail: url }));
+    } catch {
+        toast.error('更新失败');
+    }
+};
 
     // ========== 修改密码 ==========
     const handleChangePassword = async () => {
@@ -123,7 +149,6 @@ export default function Profile() {
                     管理你的个人信息和密码
                 </p>
             </div>
-
             {/* ===== 基本信息 ===== */}
             <Card>
                 <CardHeader>
@@ -134,27 +159,34 @@ export default function Profile() {
                     <CardDescription>查看你的账户信息</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <div className="text-muted-foreground mb-1">用户名</div>
-                            <div className="font-medium">{profile?.username}</div>
-                        </div>
-                        <div>
-                            <div className="text-muted-foreground mb-1">创建时间</div>
-                            <div className="font-medium flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {profile && new Date(profile.createTime).toLocaleDateString('zh-CN')}
+                    <div className="flex items-start gap-6">
+                        <AvatarUpload
+                            value={avatar}
+                            onChange={handleSaveAvatar}
+                            size={96}
+                        />
+                        <div className="grid grid-cols-2 gap-4 text-sm flex-1">
+                            <div>
+                                <div className="text-muted-foreground mb-1">用户名</div>
+                                <div className="font-medium">{profile?.username}</div>
                             </div>
-                        </div>
-                        <div className="col-span-2">
-                            <div className="text-muted-foreground mb-1">拥有角色</div>
-                            <div className="flex flex-wrap gap-1">
-                                {profile?.roles.map((role) => (
-                                    <Badge key={role} variant="secondary">
-                                        <Shield className="h-3 w-3 mr-1" />
-                                        {role}
-                                    </Badge>
-                                ))}
+                            <div>
+                                <div className="text-muted-foreground mb-1">创建时间</div>
+                                <div className="font-medium flex items-center gap-1">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {profile && new Date(profile.createTime).toLocaleDateString('zh-CN')}
+                                </div>
+                            </div>
+                            <div className="col-span-2">
+                                <div className="text-muted-foreground mb-1">拥有角色</div>
+                                <div className="flex flex-wrap gap-1">
+                                    {profile?.roles.map((role) => (
+                                        <Badge key={role} variant="secondary">
+                                            <Shield className="h-3 w-3 mr-1" />
+                                            {role}
+                                        </Badge>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -245,6 +277,8 @@ export default function Profile() {
                     </Button>
                 </CardContent>
             </Card>
+
+
         </div>
     );
 }

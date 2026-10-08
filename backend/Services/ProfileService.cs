@@ -28,6 +28,7 @@ public class ProfileService : IProfileService
             Id = user.Id,
             Username = user.Username,
             Email = user.Email,
+            Avatar = user.Avatar,
             CreateTime = user.CreateTime,
             Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
         };
@@ -40,6 +41,9 @@ public class ProfileService : IProfileService
 
         if (request.Email != null)
             user.Email = request.Email;
+
+        if (request.Avatar != null) 
+            user.Avatar = request.Avatar;
 
         await _context.SaveChangesAsync();
         return true;

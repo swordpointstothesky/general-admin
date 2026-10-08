@@ -30,6 +30,10 @@ namespace GeneralAdmin.Backend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Color")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTime>("CreateTime")
                         .HasColumnType("timestamp with time zone");
 
@@ -321,6 +325,9 @@ namespace GeneralAdmin.Backend.Migrations
                     b.Property<string>("CreateTime")
                         .HasColumnType("text");
 
+                    b.Property<DateOnly?>("EnrollDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("Gender")
                         .HasColumnType("text");
 
@@ -328,6 +335,9 @@ namespace GeneralAdmin.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Photo")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -355,6 +365,9 @@ namespace GeneralAdmin.Backend.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
+                    b.Property<string>("Photo")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.ToTable("Teachers");
@@ -367,6 +380,9 @@ namespace GeneralAdmin.Backend.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Avatar")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreateTime")
                         .HasColumnType("timestamp with time zone");

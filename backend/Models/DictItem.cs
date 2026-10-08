@@ -17,6 +17,11 @@ public class DictItem
 
     public int SortOrder { get; set; }
     public bool IsDefault { get; set; }
+    /// <summary>
+    /// 展示颜色：blue / pink / green / red / orange / purple / yellow / gray
+    /// </summary>
+    [MaxLength(50)]
+    public string? Color { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreateTime { get; set; } = DateTime.UtcNow;
 }

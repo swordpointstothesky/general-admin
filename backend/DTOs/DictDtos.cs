@@ -41,6 +41,7 @@ public class DictItemDto
     public int DictTypeId { get; set; }
     public string Label { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
+    public string? Color { get; set; }  // ✅ 新增
     public int SortOrder { get; set; }
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; }
@@ -51,6 +52,7 @@ public class CreateDictItemRequest
     public int DictTypeId { get; set; }
     public string Label { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
+    public string? Color { get; set; }  // ✅ 新增
     public int SortOrder { get; set; }
     public bool IsDefault { get; set; }
 }
@@ -59,6 +61,7 @@ public class UpdateDictItemRequest
 {
     public string? Label { get; set; }
     public string? Value { get; set; }
+    public string? Color { get; set; }  // ✅ 新增
     public int? SortOrder { get; set; }
     public bool? IsDefault { get; set; }
     public bool? IsActive { get; set; }

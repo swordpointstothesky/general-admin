@@ -9,6 +9,8 @@ public class StudentDto
     public string? Grade { get; set; } = string.Empty;
     public string? ClassName { get; set; } = string.Empty;
     public string? CreateTime { get; set; } = string.Empty;
+    public DateOnly? EnrollDate { get; set; }  // ✅ 新增
+    public string? Photo { get; set; }
 }
 
 public class CreateStudentRequest
@@ -19,6 +21,8 @@ public class CreateStudentRequest
     public string? Grade { get; set; } = string.Empty;
     public string? ClassName { get; set; } = string.Empty;
     public string? CreateTime { get; set; } = string.Empty;
+    public DateOnly? EnrollDate { get; set; }  // ✅ 新增
+    public string? Photo { get; set; }
 }
 
 public class UpdateStudentRequest
@@ -29,4 +33,6 @@ public class UpdateStudentRequest
     public string? Grade { get; set; }
     public string? ClassName { get; set; }
     public string? CreateTime { get; set; }
+    public DateOnly? EnrollDate { get; set; }  // ✅ 新增
+    public string? Photo { get; set; }
 }

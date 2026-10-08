@@ -24,6 +24,7 @@ public class UserService : IUserService
                 Username = u.Username,
                 Email = u.Email,
                 CreateTime = u.CreateTime,
+                Avatar = u.Avatar,
                 IsActive = u.IsActive
             })
             .ToListAsync();

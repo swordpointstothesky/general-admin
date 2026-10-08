@@ -26,6 +26,8 @@ public class StudentService : IStudentService
                 Grade = x.Grade,
                 ClassName = x.ClassName,
                 CreateTime = x.CreateTime,
+                EnrollDate = x.EnrollDate,      // ✅ 新增
+                Photo=x.Photo
             })
             .ToListAsync();
     }
@@ -44,6 +46,8 @@ public class StudentService : IStudentService
             Grade = entity.Grade,
             ClassName = entity.ClassName,
             CreateTime = entity.CreateTime,
+            EnrollDate = entity.EnrollDate,      // ✅ 新增
+            Photo = entity.Photo
         };
     }
 
@@ -57,6 +61,8 @@ public class StudentService : IStudentService
             Grade = request.Grade,
             ClassName = request.ClassName,
             CreateTime = request.CreateTime,
+            EnrollDate = request.EnrollDate,  // ✅ 新增
+            Photo = request.Photo
         };
 
         _context.Students.Add(entity);
@@ -82,6 +88,10 @@ public class StudentService : IStudentService
             entity.ClassName = request.ClassName;
         if (!string.IsNullOrEmpty(request.CreateTime))
             entity.CreateTime = request.CreateTime;
+        if (request.EnrollDate.HasValue)
+            entity.EnrollDate = request.EnrollDate.Value;
+        if (request.Photo != null)
+            entity.Photo = string.IsNullOrEmpty(request.Photo) ? null : request.Photo;
 
         await _context.SaveChangesAsync();
         return true;

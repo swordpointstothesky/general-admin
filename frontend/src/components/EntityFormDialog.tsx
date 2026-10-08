@@ -1,4 +1,5 @@
 //import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 import {
     Dialog,
     DialogContent,
@@ -10,18 +11,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/DatePicker';
+import { FileUpload } from '@/components/FileUpload';
+import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue,
+    //SelectValue,
 } from '@/components/ui/select';
 export interface FormField {
     key: string;
     label: string;
-    type?: 'text' | 'number' | 'password' | 'textarea' | 'select';
+    type?: 'text' | 'number' | 'password' | 'textarea' | 'select' | 'date' | 'image' | 'switch';
     options?: { label: string; value: any }[];
     placeholder?: string;
     required?: boolean;
@@ -57,6 +62,24 @@ export function EntityFormDialog({
         onFormChange({ ...formData, [key]: value });
     };
 
+    const validate = (): string | null => {
+        for (const field of fields) {
+            if (!field.required) continue;
+            const value = formData[field.key];
+
+            // 空字符串、null、undefined 都算未填
+            if (value === null || value === undefined || value === '') {
+                return `请填写「${field.label}」`;
+            }
+
+            // 数字 0 也算有效，但 NaN 不算
+            if (field.type === 'number' && isNaN(Number(value))) {
+                return `「${field.label}」必须是数字`;
+            }
+        }
+        return null;
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-lg">
@@ -79,8 +102,17 @@ export function EntityFormDialog({
                                     onValueChange={(value) => handleChange(field.key, value ?? '')}
                                     disabled={field.disabled}
                                 >
-                                    <SelectTrigger id={`form-${field.key}`} className="w-full">
-                                        <SelectValue placeholder="请选择" />
+                                    <SelectTrigger className="w-full">
+                                        <span
+                                            className={cn(
+                                                'flex-1 text-left truncate',
+                                                !formData[field.key] && 'text-muted-foreground'
+                                            )}
+                                        >
+                                            {field.options?.find(
+                                                (o) => String(o.value) === String(formData[field.key])
+                                            )?.label || '请选择'}
+                                        </span>
                                     </SelectTrigger>
                                     <SelectContent>
                                         {field.options?.map((opt) => (
@@ -97,9 +129,35 @@ export function EntityFormDialog({
                                     onChange={(e) => handleChange(field.key, e.target.value)}
                                     disabled={field.disabled}
                                     placeholder={field.placeholder}
-                                    rows={3}
+                                    rows={4}
                                     className="w-full px-3 py-2 border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 resize-none"
                                 />
+                            ) : field.type === 'date' ? (
+                                <DatePicker
+                                    value={formData[field.key] ?? ''}
+                                    onChange={(v) => handleChange(field.key, v)}
+                                    disabled={field.disabled}
+                                    placeholder={`请选择${field.label}`}
+                                />
+                            ) : field.type === 'image' ? (
+                                <FileUpload
+                                    value={formData[field.key] ?? ''}
+                                    onChange={(url) => handleChange(field.key, url)}
+                                    imageOnly
+                                    maxSize={5}
+                                />
+                            ) : field.type === 'switch' ? (
+                                <div className="flex items-center h-10">
+                                    <Switch
+                                        id={`form-${field.key}`}
+                                        checked={!!formData[field.key]}
+                                        onCheckedChange={(v) => handleChange(field.key, v)}
+                                        disabled={field.disabled}
+                                    />
+                                    <span className="ml-2 text-sm text-muted-foreground">
+                                        {formData[field.key] ? '是' : '否'}
+                                    </span>
+                                </div>
                             ) : (
                                 <Input
                                     id={`form-${field.key}`}
@@ -123,7 +181,18 @@ export function EntityFormDialog({
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         取消
                     </Button>
-                    <Button onClick={onSubmit} disabled={submitting}>
+                    <Button
+                        onClick={async () => {
+                            // ✅ 校验
+                            const error = validate();
+                            if (error) {
+                                toast.error(error);
+                                return;
+                            }
+                            await onSubmit();
+                        }}
+                        disabled={submitting}
+                    >
                         {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {submitText}
                     </Button>

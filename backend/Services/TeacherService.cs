@@ -24,6 +24,7 @@ public class TeacherService : ITeacherService
                 Gender = x.Gender,
                 Age = x.Age,
                 CreateTime = x.CreateTime,
+                Photo = x.Photo,
             })
             .ToListAsync();
     }
@@ -40,6 +41,7 @@ public class TeacherService : ITeacherService
             Gender = entity.Gender,
             Age = entity.Age,
             CreateTime = entity.CreateTime,
+            Photo = entity.Photo,
         };
     }
 
@@ -50,7 +52,7 @@ public class TeacherService : ITeacherService
             Name = request.Name,
             Gender = request.Gender,
             Age = request.Age,
-            CreateTime = request.CreateTime,
+            Photo = request.Photo,
         };
 
         _context.Teachers.Add(entity);
@@ -70,8 +72,8 @@ public class TeacherService : ITeacherService
             entity.Gender = request.Gender;
         if (request.Age.HasValue)
             entity.Age = request.Age.Value;
-        if (!string.IsNullOrEmpty(request.CreateTime))
-            entity.CreateTime = request.CreateTime;
+        if (!string.IsNullOrEmpty(request.Photo))
+            entity.Photo = request.Photo;
 
         await _context.SaveChangesAsync();
         return true;

@@ -41,6 +41,7 @@ import {
     Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { colorOptions, getBadgeColor } from '@/lib/colorMap';
 
 // ========== 类型 ==========
 interface DictTreeNode {
@@ -57,6 +58,7 @@ interface DictItem {
     dictTypeId: number;
     label: string;
     value: string;
+    color?: string;
     sortOrder: number;
     isDefault: boolean;
     isActive: boolean;
@@ -84,7 +86,7 @@ export default function Dict() {
     // ===== 字典项弹窗 =====
     const [itemDialogOpen, setItemDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<DictItem | null>(null);
-    const [itemForm, setItemForm] = useState({ label: '', value: '', sortOrder: 0, isDefault: false });
+    const [itemForm, setItemForm] = useState({ label: '', value: '', color: '', sortOrder: 0, isDefault: false });
 
     // ===== 删除确认 =====
     const [deleteTypeOpen, setDeleteTypeOpen] = useState(false);
@@ -336,7 +338,7 @@ export default function Dict() {
     const handleOpenCreateItem = () => {
         if (!selectedDict) return;
         setEditingItem(null);
-        setItemForm({ label: '', value: '', sortOrder: items.length + 1, isDefault: false });
+        setItemForm({ label: '', value: '', color: '', sortOrder: items.length + 1, isDefault: false });
         setItemDialogOpen(true);
     };
 
@@ -345,6 +347,7 @@ export default function Dict() {
         setItemForm({
             label: item.label,
             value: item.value,
+            color: item.color || '',
             sortOrder: item.sortOrder,
             isDefault: item.isDefault,
         });
@@ -468,6 +471,7 @@ export default function Dict() {
                                         <th className="text-center p-3 font-medium text-muted-foreground w-20">默认</th>
                                         <th className="text-center p-3 font-medium text-muted-foreground w-20">状态</th>
                                         <th className="text-right p-3 font-medium text-muted-foreground w-28">操作</th>
+                                        <th className="text-center p-3 font-medium text-muted-foreground w-20">颜色</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -503,6 +507,9 @@ export default function Dict() {
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <span className={`inline-block w-4 h-4 rounded-full ${item.color ? getBadgeColor(item.color).split(' ')[0] : 'bg-gray-200'}`} />
                                             </td>
                                         </tr>
                                     ))}
@@ -602,6 +609,33 @@ export default function Dict() {
                                 onChange={(e) => setItemForm({ ...itemForm, value: e.target.value })}
                                 placeholder="如：active"
                             />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label>颜色</Label>
+                            <Select
+                                value={itemForm.color || 'none'}
+                                onValueChange={(v) => setItemForm({ ...itemForm, color: v === 'none' ? '' : v })}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <span className="flex items-center gap-2">
+                                        {itemForm.color && (
+                                            <span className={`inline-block w-3 h-3 rounded-full ${getBadgeColor(itemForm.color).split(' ')[0]}`} />
+                                        )}
+                                        {colorOptions.find((c) => c.value === itemForm.color)?.label || '默认（灰色）'}
+                                    </span>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">默认（灰色）</SelectItem>
+                                    {colorOptions.filter((c) => c.value).map((c) => (
+                                        <SelectItem key={c.value} value={c.value}>
+                                            <span className="flex items-center gap-2">
+                                                <span className={`inline-block w-3 h-3 rounded-full ${getBadgeColor(c.value).split(' ')[0]}`} />
+                                                {c.label}
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">

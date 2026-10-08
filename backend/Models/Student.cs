@@ -35,4 +35,7 @@ public class Student
     /// CreateTime
     /// </summary>
     public string? CreateTime { get; set; } = string.Empty;
+    // ✅ 新增
+    public DateOnly? EnrollDate { get; set; }
+    public string? Photo { get; set; }
 }

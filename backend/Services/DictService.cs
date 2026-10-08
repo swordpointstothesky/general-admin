@@ -229,6 +229,7 @@ public class DictService : IDictService
                 DictTypeId = i.DictTypeId,
                 Label = i.Label,
                 Value = i.Value,
+                Color = i.Color,          // ✅ 新增
                 SortOrder = i.SortOrder,
                 IsDefault = i.IsDefault,
                 IsActive = i.IsActive
@@ -247,6 +248,7 @@ public class DictService : IDictService
                 DictTypeId = i.DictTypeId,
                 Label = i.Label,
                 Value = i.Value,
+                Color = i.Color,          // ✅ 新增
                 SortOrder = i.SortOrder,
                 IsDefault = i.IsDefault,
                 IsActive = i.IsActive
@@ -264,6 +266,7 @@ public class DictService : IDictService
             DictTypeId = request.DictTypeId,
             Label = request.Label,
             Value = request.Value,
+            Color = request.Color,        // ✅ 新增
             SortOrder = request.SortOrder,
             IsDefault = request.IsDefault,
             IsActive = true
@@ -278,6 +281,7 @@ public class DictService : IDictService
             DictTypeId = item.DictTypeId,
             Label = item.Label,
             Value = item.Value,
+            Color = item.Color,           // ✅ 新增
             SortOrder = item.SortOrder,
             IsDefault = item.IsDefault,
             IsActive = item.IsActive
@@ -294,6 +298,9 @@ public class DictService : IDictService
 
         if (!string.IsNullOrEmpty(request.Value))
             item.Value = request.Value;
+
+        if (request.Color != null)        // ✅ 新增（允许设为 null 清空颜色）
+            item.Color = request.Color;
 
         if (request.SortOrder.HasValue)
             item.SortOrder = request.SortOrder.Value;

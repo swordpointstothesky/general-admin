@@ -27,4 +27,5 @@ public class Teacher
     /// CreateTime
     /// </summary>
     public string? CreateTime { get; set; } = string.Empty;
+    public string? Photo { get; set; }
 }

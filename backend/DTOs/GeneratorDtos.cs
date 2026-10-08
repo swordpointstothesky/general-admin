@@ -20,6 +20,9 @@ public class ColumnInfoDto
     public bool ShowInForm { get; set; } = true;
     public string CSharpType { get; set; } = string.Empty;
     public string TsType { get; set; } = string.Empty;
+    public string? DictType { get; set; }   // 绑定的字典编码，null 表示不是字典字段
+    public bool IsDictField => !string.IsNullOrEmpty(DictType);
+    public string InputType { get; set; } = "text";
 }
 
 public class GenerateRequest

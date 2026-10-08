@@ -6,6 +6,7 @@ public class UserDto
     public string Username { get; set; } = string.Empty;
     public string? Email { get; set; }
     public DateTime CreateTime { get; set; }
+    public string? Avatar { get; set; }
     public bool IsActive { get; set; }
     public List<RoleDto> Roles { get; set; } = new();
 }

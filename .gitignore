@@ -24,3 +24,7 @@ Thumbs.db
 
 # 生成器输出（如果测试用的临时文件）
 *.zip
+
+# 上传文件（保留目录结构）
+backend/wwwroot/uploads/
+!backend/wwwroot/uploads/.gitkeep

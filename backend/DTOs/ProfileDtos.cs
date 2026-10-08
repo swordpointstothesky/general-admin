@@ -5,6 +5,7 @@ public class ProfileDto
     public int Id { get; set; }
     public string Username { get; set; } = string.Empty;
     public string? Email { get; set; }
+    public string? Avatar { get; set; }
     public DateTime CreateTime { get; set; }
     public List<string> Roles { get; set; } = new();
 }
@@ -12,6 +13,7 @@ public class ProfileDto
 public class UpdateProfileRequest
 {
     public string? Email { get; set; }
+    public string? Avatar { get; set; }
 }
 
 public class ChangePasswordRequest

@@ -3,11 +3,21 @@ import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { User, KeyRound, LogOut, ChevronDown } from 'lucide-react';
+import { getFullUrl } from '@/lib/upload';
 
-export function UserDropdown({ username, email, roles, onLogout }: any) {
+interface UserDropdownProps {
+    username: string;
+    email?: string;
+    roles: string[];
+    avatar?: string | null;
+    onLogout: () => void;
+}
+
+export function UserDropdown({ username, email, roles, onLogout, avatar }: UserDropdownProps) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const initial = username ? username.charAt(0).toUpperCase() : '?';
+    const avatarUrl = getFullUrl(avatar);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -26,9 +36,13 @@ export function UserDropdown({ username, email, roles, onLogout }: any) {
                 className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-muted transition"
             >
                 <Avatar className="h-7 w-7">
-                    <AvatarFallback className="bg-yellow-400 text-yellow-900 text-xs font-medium">
-                        {initial}
-                    </AvatarFallback>
+                    {avatarUrl ? (
+                        <img src={avatarUrl} alt="头像" className="w-full h-full object-cover" />
+                    ) : (
+                        <AvatarFallback className="bg-yellow-400 text-yellow-900 text-xs font-medium">
+                            {initial}
+                        </AvatarFallback>
+                    )}
                 </Avatar>
                 <span className="text-sm font-medium">{username}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -38,9 +52,13 @@ export function UserDropdown({ username, email, roles, onLogout }: any) {
                 <div className="absolute right-0 top-11 w-64 bg-popover text-popover-foreground border rounded-md shadow-md z-50">
                     <div className="flex items-center gap-3 p-3">
                         <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-yellow-400 text-yellow-900 text-sm font-medium">
-                                {initial}
-                            </AvatarFallback>
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt="头像" className="w-full h-full object-cover" />
+                            ) : (
+                                <AvatarFallback className="bg-yellow-400 text-yellow-900 text-sm font-medium">
+                                    {initial}
+                                </AvatarFallback>
+                            )}
                         </Avatar>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
