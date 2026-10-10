@@ -202,15 +202,14 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+// ⚠️ 关键顺序：CORS → 静态文件 → 认证 → 授权 → 路由
 app.UseCors("AllowAll");
 app.UseStaticFiles();
-app.MapGet("/api/hello", () => new { Message = "Hello from .NET 10!", Timestamp = DateTime.Now });
-
-
-app.UseHttpsRedirection();
-app.UseAuthentication();   // ⚠️ 这个别漏了，顺序要在 UseAuthorization 之前
+app.UseAuthentication();
 app.UseAuthorization();
-// ===== 映射 Hub =====
+
+// 路由映射（放最后）
+app.MapGet("/api/hello", () => new { Message = "Hello from .NET 10!", Timestamp = DateTime.Now });
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllers();
 
