@@ -19,6 +19,10 @@ public class AppDbContext : DbContext
     public DbSet<Teacher> Teachers { get; set; }
     public DbSet<DictType> DictTypes { get; set; }
     public DbSet<DictItem> DictItems { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<Conversation> Conversations { get; set; }
+    public DbSet<ConversationMember> ConversationMembers { get; set; }
+    public DbSet<Message> Messages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -88,5 +92,11 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(t => t.MenuId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Notification>()
+    .HasOne(n => n.User)
+    .WithMany()
+    .HasForeignKey(n => n.UserId)
+    .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MenuTree } from '@/components/MenuTree';
+import { Badge } from '@/components/ui/badge';
 import {
     Table,
     TableBody,
@@ -35,8 +36,25 @@ import {
     CardContent,
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Pencil, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, Plus, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { usePermission } from '@/contexts/PermissionContext';
+
+//========= 权限分类顺序 ==========
+const PERMISSION_CATEGORY_ORDER = [
+    '仪表盘',
+    '用户管理',
+    '角色管理',
+    '菜单管理',
+    '数据字典',
+    '操作日志',
+    '消息通知',
+    '代码生成器',
+    '文件管理',
+    '站内消息',
+    '学生管理',
+    '老师管理',
+    '系统设置',
+];
 
 // ========== 类型定义 ==========
 interface Permission {
@@ -90,6 +108,8 @@ export default function Roles() {
     const [deletingRole, setDeletingRole] = useState<Role | null>(null);
     const [deleting, setDeleting] = useState(false);
 
+    // 菜单展开状态
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     // ========== 获取数据 ==========
     const fetchRoles = async () => {
         setLoading(true);
@@ -137,6 +157,14 @@ export default function Roles() {
             description: role.description || '',
             permissionIds: role.permissions.map(p => p.id),
         });
+
+        // ✅ 默认展开已选中的分类
+        const selectedIds = new Set(role.permissions.map((p) => p.id));
+        const expanded = new Set<string>();
+        Object.entries(groupedPermissions).forEach(([cat, perms]) => {
+            if (perms.some((p) => selectedIds.has(p.id))) expanded.add(cat);
+        });
+        setExpandedCategories(expanded);
 
         // 获取角色已分配的菜单
         try {
@@ -213,13 +241,19 @@ export default function Roles() {
         }));
     };
 
-    // ========== 按分类分组 ==========
-    const groupedPermissions = (Array.isArray(permissions) ? permissions : []).reduce((acc, p) => {
-        const category = p.category || '其他';
-        if (!acc[category]) acc[category] = [];
-        acc[category].push(p);
+    // 按分类分组
+    const groupedPermissions = permissions.reduce((acc, p) => {
+        const cat = p.category || '其他';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(p);
         return acc;
     }, {} as Record<string, Permission[]>);
+
+    // 按预定义顺序排序
+    const sortedCategories = [
+        ...PERMISSION_CATEGORY_ORDER.filter((c) => groupedPermissions[c]),
+        ...Object.keys(groupedPermissions).filter((c) => !PERMISSION_CATEGORY_ORDER.includes(c)),
+    ];
 
     // ========== 加载状态 ==========
     if (loading) {
@@ -357,48 +391,128 @@ export default function Roles() {
                                 placeholder="请输入角色描述"
                             />
                         </div>
+                        {/* ===== 权限分配 ===== */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-medium">权限分配</Label>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setExpandedCategories(new Set(sortedCategories))}
+                                        className="text-xs text-primary hover:underline"
+                                    >
+                                        全部展开
+                                    </button>
+                                    <span className="text-muted-foreground">|</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setExpandedCategories(new Set())}
+                                        className="text-xs text-primary hover:underline"
+                                    >
+                                        全部收起
+                                    </button>
+                                    <Badge variant="secondary" className="text-xs">
+                                        已选 {formData.permissionIds.length} / {permissions.length}
+                                    </Badge>
+                                </div>
+                            </div>
 
-                        <div className="space-y-2">
-                            <Label>权限分配</Label>
-                            <Card>
-                                <CardContent className="pt-4">
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {Object.entries(groupedPermissions).map(([category, perms]) => (
-                                            <div key={category} className="space-y-1">
-                                                <div className="text-sm font-medium text-gray-600">{category}</div>
-                                                {perms.map((perm) => (
-                                                    <div key={perm.id} className="flex items-center space-x-2">
-                                                        <Checkbox
-                                                            id={`perm-${perm.id}`}
-                                                            checked={formData.permissionIds.includes(perm.id)}
-                                                            onCheckedChange={() => togglePermission(perm.id)}
-                                                        />
-                                                        <Label
-                                                            htmlFor={`perm-${perm.id}`}
-                                                            className="text-sm font-normal cursor-pointer"
+                            <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                                {sortedCategories.map((category) => {
+                                    const perms = groupedPermissions[category];
+                                    const selectedCount = perms.filter((p) =>
+                                        formData.permissionIds.includes(p.id)
+                                    ).length;
+                                    const isExpanded = expandedCategories.has(category);
+                                    const allSelected = selectedCount === perms.length && perms.length > 0;
+
+                                    return (
+                                        <div key={category} className="border-b last:border-b-0">
+                                            <div
+                                                className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                                                onClick={() => {
+                                                    setExpandedCategories((prev) => {
+                                                        const next = new Set(prev);
+                                                        if (next.has(category)) next.delete(category);
+                                                        else next.add(category);
+                                                        return next;
+                                                    });
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                    {isExpanded ? (
+                                                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                    ) : (
+                                                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                    )}
+                                                    <span className="text-sm font-medium truncate">{category}</span>
+                                                    {selectedCount > 0 && (
+                                                        <Badge
+                                                            variant={allSelected ? 'default' : 'secondary'}
+                                                            className="text-[10px] h-4 px-1.5 shrink-0"
                                                         >
-                                                            {perm.displayName}
-                                                        </Label>
-                                                    </div>
-                                                ))}
+                                                            {selectedCount}/{perms.length}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const ids = perms.map((p) => p.id);
+                                                        setFormData((prev) => ({
+                                                            ...prev,
+                                                            permissionIds: allSelected
+                                                                ? prev.permissionIds.filter((id) => !ids.includes(id))
+                                                                : Array.from(new Set([...prev.permissionIds, ...ids])),
+                                                        }));
+                                                    }}
+                                                    className="text-xs text-primary hover:underline shrink-0 ml-2"
+                                                >
+                                                    {allSelected ? '取消全选' : '全选'}
+                                                </button>
                                             </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <div className="text-xs text-gray-400">
-                                已选 {formData.permissionIds.length} 个权限
+
+                                            {isExpanded && (
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 px-3 pb-3 pt-1">
+                                                    {perms.map((perm) => (
+                                                        <div
+                                                            key={perm.id}
+                                                            className="flex items-center space-x-2 py-0.5"
+                                                        >
+                                                            <Checkbox
+                                                                id={`perm-${perm.id}`}
+                                                                checked={formData.permissionIds.includes(perm.id)}
+                                                                onCheckedChange={() => togglePermission(perm.id)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label
+                                                                htmlFor={`perm-${perm.id}`}
+                                                                className="text-sm font-normal cursor-pointer truncate"
+                                                                title={perm.displayName}
+                                                            >
+                                                                {perm.displayName}
+                                                            </Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
-                        {/* 菜单分配 */}
+
+                        {/* ===== 菜单分配 ===== */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <Label className="text-sm font-medium">菜单分配</Label>
-                                <span className="text-xs text-muted-foreground">
+                                <Badge variant="secondary" className="text-xs">
                                     已选 {selectedMenuIds.length} 个菜单
-                                </span>
+                                </Badge>
                             </div>
-                            <div className="border rounded-lg p-4 bg-muted/30">
+
+                            <div className="border rounded-lg max-h-[300px] overflow-y-auto p-3">
                                 <MenuTree
                                     menus={allMenus}
                                     selectedIds={selectedMenuIds}

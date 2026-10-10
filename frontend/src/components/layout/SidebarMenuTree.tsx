@@ -20,7 +20,9 @@ import {
     GraduationCap,
     UserCog,
     ChevronRight,
-    BookOpen 
+    BookOpen,
+    Bell,
+    MessageCircle 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -36,7 +38,9 @@ const iconMap: Record<string, any> = {
     Shield,
     GraduationCap,
     UserCog,
-    BookOpen
+    BookOpen,
+    Bell,
+    MessageCircle 
 };
 
 interface MenuItem {

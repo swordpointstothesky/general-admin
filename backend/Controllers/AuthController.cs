@@ -1,11 +1,12 @@
+using GeneralAdmin.Backend.Data;
+using GeneralAdmin.Backend.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.EntityFrameworkCore;
-using GeneralAdmin.Backend.Data;
-using GeneralAdmin.Backend.Models;
 
 namespace GeneralAdmin.Backend.Controllers;
 
@@ -22,16 +23,19 @@ public class AuthController : ControllerBase
         _context = context;
     }
 
-    public class LoginRequest
-    {
-        public string Username { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-    }
-
     public class LoginResponse
     {
         public string Token { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
+    }
+
+    public class LoginRequest
+    {
+        [Required(ErrorMessage = "用户名不能为空")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "密码不能为空")]
+        public string Password { get; set; } = string.Empty;
     }
 
     [HttpPost("login")]

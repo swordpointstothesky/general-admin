@@ -14,6 +14,7 @@ import { Search, Moon, Sun, Maximize, Globe, Bell } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useSettings } from '@/contexts/SettingsContext';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from './NotificationBell';
 
 const breadcrumbMap: Record<string, string[]> = {
     '/dashboard': ['仪表盘'],
@@ -26,6 +27,7 @@ const breadcrumbMap: Record<string, string[]> = {
     '/students': ['业务管理', '学生管理'],
     '/teachers': ['业务管理', '老师管理'],
     '/profile': ['个人中心'],
+    '/notifications': ['系统管理', '通知管理'],
 };
 
 interface HeaderProps {
@@ -178,27 +180,7 @@ export function Header({ username, email, roles, onLogout, avatar }: HeaderProps
                 )}
 
                 {/* 通知 */}
-                {settings.enableNotification && (
-                    <div className="relative" ref={notifRef}>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 relative"
-                            title="通知"
-                            onClick={() => setNotifOpen((v) => !v)}
-                        >
-                            <Bell className="h-4 w-4" />
-                            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-destructive" />
-                        </Button>
-                        {notifOpen && (
-                            <div className="absolute right-0 top-10 w-80 bg-popover text-popover-foreground border rounded-md shadow-md p-4 z-50">
-                                <p className="text-sm text-muted-foreground text-center py-6">
-                                    暂无通知
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
+                {settings.enableNotification && <NotificationBell />}
 
                 <Separator orientation="vertical" className="h-6 mx-1" />
 

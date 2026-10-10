@@ -1,4 +1,6 @@
-﻿namespace GeneralAdmin.Backend.DTOs;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace GeneralAdmin.Backend.DTOs;
 
 // ========== 字典类型 ==========
 public class DictTypeDto
@@ -16,9 +18,19 @@ public class DictTypeDto
 
 public class CreateDictTypeRequest
 {
+    [Required(ErrorMessage = "字典编码不能为空")]
+    [MaxLength(50)]
+    [RegularExpression(@"^[a-z][a-z0-9_]*$",
+        ErrorMessage = "编码只能包含小写字母、数字、下划线，且以字母开头")]
     public string Name { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "显示名不能为空")]
+    [MaxLength(50)]
     public string DisplayName { get; set; } = string.Empty;
+
+    [MaxLength(200)]
     public string? Description { get; set; }
+
     public int? MenuId { get; set; }
 }
 
@@ -49,10 +61,20 @@ public class DictItemDto
 
 public class CreateDictItemRequest
 {
+    [Required]
     public int DictTypeId { get; set; }
+
+    [Required(ErrorMessage = "显示文本不能为空")]
+    [MaxLength(50)]
     public string Label { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "值不能为空")]
+    [MaxLength(50)]
     public string Value { get; set; } = string.Empty;
-    public string? Color { get; set; }  // ✅ 新增
+
+    [MaxLength(50)]
+    public string? Color { get; set; }
+
     public int SortOrder { get; set; }
     public bool IsDefault { get; set; }
 }

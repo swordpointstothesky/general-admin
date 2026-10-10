@@ -54,4 +54,32 @@ public class StudentsController : ControllerBase
         if (!result) return NotFound();
         return NoContent();
     }
+
+    [HttpPost("import")]
+    public async Task<IActionResult> Import(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "请选择要导入的文件" });
+
+        // 校验扩展名
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (ext != ".xlsx" && ext != ".xls")
+            return BadRequest(new { message = "只支持 Excel 文件（.xlsx / .xls）" });
+
+        if (file.Length > 10 * 1024 * 1024)
+            return BadRequest(new { message = "文件大小不能超过 10MB" });
+
+        using var stream = file.OpenReadStream();
+        var result = await _service.ImportAsync(stream);
+        return Ok(result);
+    }
+
+    [HttpGet("import-template")]
+    public IActionResult GetImportTemplate()
+    {
+        var bytes = _service.GenerateImportTemplate();
+        return File(bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "学生导入模板.xlsx");
+    }
 }

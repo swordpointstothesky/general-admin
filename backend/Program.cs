@@ -1,9 +1,12 @@
+using GeneralAdmin.Backend.Common;
 using GeneralAdmin.Backend.Data;
 using GeneralAdmin.Backend.Filters;
+using GeneralAdmin.Backend.Hubs;
 using GeneralAdmin.Backend.Models;
 using GeneralAdmin.Backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -16,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<OperationLogFilter>();
+    options.Filters.Add<ValidationFilter>();
 });
 
 // ========== 2. 授权策略 ==========
@@ -68,13 +72,30 @@ builder.Services.AddOpenApi("v1", options =>
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 
+// ===== SignalR =====
+builder.Services.AddSignalR();
+
 // ========== 8. CORS ==========
+// ===== CORS（必须指定 Origin + AllowCredentials） =====
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "https://your-admin.vercel.app"   // 生产环境
+              )
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();   // ✅ SignalR 必需
     });
+});
+
+// 关闭默认的 ModelState 自动响应（避免和我们的过滤器冲突）
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
 });
 
 var app = builder.Build();
@@ -111,6 +132,10 @@ using (var scope = app.Services.CreateScope())
         );
         db.SaveChanges();
     }
+
+    // ✅ 权限同步（程序启动时自动执行）
+    await PermissionSeeder.SeedAsync(db);
+    await MenuSeeder.SeedAsync(db);
 
     // 3. Admin 角色拥有所有权限
     var adminRole = db.Roles.First(r => r.Name == "Admin");
@@ -181,9 +206,12 @@ app.UseCors("AllowAll");
 app.UseStaticFiles();
 app.MapGet("/api/hello", () => new { Message = "Hello from .NET 10!", Timestamp = DateTime.Now });
 
+
 app.UseHttpsRedirection();
 app.UseAuthentication();   // ⚠️ 这个别漏了，顺序要在 UseAuthorization 之前
 app.UseAuthorization();
+// ===== 映射 Hub =====
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllers();
 
 app.Run();

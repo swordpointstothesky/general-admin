@@ -1,4 +1,6 @@
-﻿namespace GeneralAdmin.Backend.DTOs;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace GeneralAdmin.Backend.DTOs;
 
 public class RoleDto
 {
@@ -20,8 +22,13 @@ public class PermissionDto
 
 public class CreateRoleRequest
 {
+    [Required(ErrorMessage = "角色名称不能为空")]
+    [MaxLength(50, ErrorMessage = "角色名称不能超过 50 个字符")]
     public string Name { get; set; } = string.Empty;
+
+    [MaxLength(200)]
     public string? Description { get; set; }
+
     public List<int> PermissionIds { get; set; } = new();
 }
 

@@ -9,4 +9,7 @@ public interface IStudentService
     Task<StudentDto> CreateAsync(CreateStudentRequest request);
     Task<bool> UpdateAsync(int id, UpdateStudentRequest request);
     Task<bool> DeleteAsync(int id);
+
+    Task<ImportResult> ImportAsync(Stream excelStream);
+    byte[] GenerateImportTemplate();
 }

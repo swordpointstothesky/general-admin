@@ -11,11 +11,13 @@ import Students from './pages/Students';
 import Teachers from './pages/Teachers';
 import Dict from './pages/Dict';
 import Layout from './components/Layout';
+import Chat from './pages/Chat';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { SettingsButton } from './components/settings/SettingsButton';
+import Notifications from './pages/Notifications';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('token');
@@ -47,6 +49,8 @@ function App() {
                                     <Route path="/students" element={<Students />} />
                                     <Route path="/teachers" element={<Teachers />} />
                                     <Route path="/dict" element={<Dict />} />
+                                    <Route path="/notifications" element={<Notifications />} />
+                                    <Route path="/chat" element={<Chat />} />
                                 // 仪表盘子页面
                                     <Route path="/dashboard/monitor" element={<div className="p-6"><h1 className="text-xl font-bold">监控页</h1><p className="text-muted-foreground mt-2">开发中...</p></div>} />
                                     <Route path="/dashboard/workplace" element={<div className="p-6"><h1 className="text-xl font-bold">工作台</h1><p className="text-muted-foreground mt-2">开发中...</p></div>} />

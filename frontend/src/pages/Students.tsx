@@ -7,6 +7,7 @@ import { EntityFormDialog } from '@/components/EntityFormDialog';
 import type { FormField } from '@/components/EntityFormDialog';
 import { ColumnSettings } from '@/components/ColumnSettings';
 import type { ColumnSettingItem } from '@/components/ColumnSettings';
+import { ImportDialog } from '@/components/ImportDialog';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { exportToExcel } from '@/lib/export';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,9 @@ export default function Students() {
 
     // 批量删除
     const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+
+    //导入
+    const [importOpen, setImportOpen] = useState(false);
 
     // 全屏
     const tableFullscreen = useFullscreen<HTMLDivElement>();
@@ -577,7 +581,11 @@ export default function Students() {
                                     导出选中 ({selectedKeys.length})
                                 </Button>
                             )}
-                            <Button size="sm" variant="outline">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setImportOpen(true)}
+                            >
                                 <Upload className="mr-1.5 h-4 w-4" />
                                 导入
                             </Button>
@@ -700,6 +708,15 @@ export default function Students() {
                 onOpenChange={setColumnSettingsOpen}
                 columns={columnSettingItems}
                 onSave={handleSaveColumnSettings}
+            />
+
+            <ImportDialog
+                open={importOpen}
+                onOpenChange={setImportOpen}
+                importUrl="/api/students/import"
+                templateUrl="/api/students/import-template"
+                moduleName="学生"
+                onSuccess={fetchItems}
             />
         </div>
     );
