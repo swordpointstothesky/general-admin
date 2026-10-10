@@ -77,18 +77,18 @@ builder.Services.AddSignalR();
 
 // ========== 8. CORS ==========
 // ===== CORS（必须指定 Origin + AllowCredentials） =====
+// ===== 配置 CORS =====
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "https://your-admin.vercel.app"   // 生产环境
+                "http://localhost:5173", // 本地开发前端
+                "https://general-admin-sigma.vercel.app" // ✅ 你的 Vercel 前端域名
               )
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials();   // ✅ SignalR 必需
+              .AllowCredentials(); // SignalR 需要这个配置来传递认证信息
     });
 });
 
