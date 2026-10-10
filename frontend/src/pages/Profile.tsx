@@ -5,7 +5,6 @@ import api from '@/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileUpload } from '@/components/FileUpload';
 import { AvatarUpload } from '@/components/AvatarUpload';
 
 import {

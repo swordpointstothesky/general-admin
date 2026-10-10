@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-
+import { createContext, useContext, useEffect, useState } from 'react';
+import type {ReactNode} from 'react';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type TabStyle = 'chrome' | 'google';
 export type ThemeStyle = 'pure' | 'skin';

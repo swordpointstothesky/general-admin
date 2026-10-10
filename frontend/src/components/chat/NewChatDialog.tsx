@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Loader2, Search, User } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { getFullUrl } from '@/lib/upload';
 import { cn } from '@/lib/utils';
 

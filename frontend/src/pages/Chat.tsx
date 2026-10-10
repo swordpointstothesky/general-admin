@@ -69,7 +69,7 @@ export default function Chat() {
     })();
 
     // ===== SignalR =====
-    const { connected, sendMessage, sendTyping, markRead, joinConversation } = useChatHub({
+    const { connected, sendMessage, sendTyping, markRead } = useChatHub({
         onMessage: (msg) => {
             if (activeConv && msg.conversationId === activeConv.id) {
                 setMessages((prev) => [...prev, msg]);

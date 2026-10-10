@@ -31,10 +31,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-    Card,
-    CardContent,
-} from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pencil, Trash2, Plus, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { usePermission } from '@/contexts/PermissionContext';

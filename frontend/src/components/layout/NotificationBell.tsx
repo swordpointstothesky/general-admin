@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Bell, Check, Trash2, CheckCheck, Info, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Bell, Trash2, CheckCheck, Info, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import api from '@/api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

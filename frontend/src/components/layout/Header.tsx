@@ -10,10 +10,9 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Search, Moon, Sun, Maximize, Globe, Bell } from 'lucide-react';
+import { Search, Moon, Sun, Maximize, Globe } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useSettings } from '@/contexts/SettingsContext';
-import { cn } from '@/lib/utils';
 import { NotificationBell } from './NotificationBell';
 
 const breadcrumbMap: Record<string, string[]> = {
@@ -43,9 +42,7 @@ export function Header({ username, email, roles, onLogout, avatar }: HeaderProps
     const breadcrumbs = breadcrumbMap[location.pathname] || ['首页'];
 
     const [searchOpen, setSearchOpen] = useState(false);
-    const [notifOpen, setNotifOpen] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
-    const notifRef = useRef<HTMLDivElement>(null);
 
     const { settings, updateSettings } = useSettings();
 
@@ -57,9 +54,6 @@ export function Header({ username, email, roles, onLogout, avatar }: HeaderProps
         const handler = (e: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
                 setSearchOpen(false);
-            }
-            if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-                setNotifOpen(false);
             }
         };
         document.addEventListener('mousedown', handler);

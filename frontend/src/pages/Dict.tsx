@@ -614,7 +614,7 @@ export default function Dict() {
                             <Label>颜色</Label>
                             <Select
                                 value={itemForm.color || 'none'}
-                                onValueChange={(v) => setItemForm({ ...itemForm, color: v === 'none' ? '' : v })}
+                                onValueChange={(v) => setItemForm({ ...itemForm, color: v === 'none' ? '' : (v ?? '') })}
                             >
                                 <SelectTrigger className="w-full">
                                     <span className="flex items-center gap-2">
