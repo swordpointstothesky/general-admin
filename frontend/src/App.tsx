@@ -12,6 +12,7 @@ import Teachers from './pages/Teachers';
 import Dict from './pages/Dict';
 import Layout from './components/Layout';
 import Chat from './pages/Chat';
+import Menu from './pages/Menu';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -51,6 +52,7 @@ function App() {
                                     <Route path="/dict" element={<Dict />} />
                                     <Route path="/notifications" element={<Notifications />} />
                                     <Route path="/chat" element={<Chat />} />
+                                    <Route path="/menus" element={<Menu />} />
                                 // 仪表盘子页面
                                     <Route path="/dashboard/monitor" element={<div className="p-6"><h1 className="text-xl font-bold">监控页</h1><p className="text-muted-foreground mt-2">开发中...</p></div>} />
                                     <Route path="/dashboard/workplace" element={<div className="p-6"><h1 className="text-xl font-bold">工作台</h1><p className="text-muted-foreground mt-2">开发中...</p></div>} />

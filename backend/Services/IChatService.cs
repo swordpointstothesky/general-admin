@@ -13,4 +13,5 @@ public interface IChatService
     Task<bool> DeleteMessageAsync(long messageId, int userId);
     Task MarkReadAsync(int userId, long conversationId, long lastMessageId);
     Task<List<long>> GetUserConversationIdsAsync(int userId);
+    Task<bool> ClearMessagesAsync(long conversationId, int userId);
 }

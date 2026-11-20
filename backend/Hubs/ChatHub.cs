@@ -65,4 +65,16 @@ public class ChatHub : Hub
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"conv_{conversationId}");
     }
+
+    public async Task DeleteMessage(long messageId, long conversationId)
+    {
+        var userId = GetUserId();
+        var ok = await _chatService.DeleteMessageAsync(messageId, userId);
+        if (ok)
+        {
+            // 广播给会话内所有人：这条消息被撤回了
+            await Clients.Group($"conv_{conversationId}")
+                .SendAsync("MessageDeleted", messageId);
+        }
+    }
 }

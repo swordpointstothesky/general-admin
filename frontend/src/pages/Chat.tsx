@@ -16,6 +16,7 @@ import {
     FileText,
     X,
     Download,
+    Trash2,
 } from 'lucide-react';
 import { getFullUrl, uploadFile, uploadImage } from '@/lib/upload';
 import { cn } from '@/lib/utils';
@@ -69,7 +70,7 @@ export default function Chat() {
     })();
 
     // ===== SignalR =====
-    const { connected, sendMessage, sendTyping, markRead } = useChatHub({
+    const { connected, sendMessage, sendTyping, markRead, deleteMessage } = useChatHub({
         onMessage: (msg) => {
             if (activeConv && msg.conversationId === activeConv.id) {
                 setMessages((prev) => [...prev, msg]);
@@ -92,6 +93,12 @@ export default function Chat() {
                 }, 3000);
             }
         },
+        onMessageDeleted: (messageId) => {
+            // 将对应消息的状态标记为已删除（前端可以直接过滤掉，或者显示“已撤回”）
+            setMessages(prev => prev.map(m =>
+                m.id === messageId ? { ...m, content: '[消息已撤回]', contentType: 'text' } : m
+            ));
+        }
     });
 
     // ===== 加载会话列表 =====
@@ -266,6 +273,19 @@ export default function Chat() {
         return `${(size / 1024 / 1024).toFixed(1)} MB`;
     };
 
+    const handleClearHistory = async () => {
+        if (!activeConv) return;
+        if (!confirm('确定要清空当前聊天记录吗？清空后不可恢复（仅对自己生效）')) return;
+
+        try {
+            await api.delete(`/api/chat/conversations/${activeConv.id}/messages`);
+            setMessages([]); // 前端立刻清空
+            toast.success('聊天记录已清空');
+        } catch {
+            toast.error('清空失败');
+        }
+    };
+
     // ===== 渲染 =====
     return (
         <div className="flex h-full gap-3">
@@ -379,6 +399,11 @@ export default function Chat() {
                                                 : '连接中...'}
                                     </div>
                                 </div>
+                                {/* 操作按钮 */}
+                                <Button variant="ghost" size="sm" onClick={handleClearHistory}>
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    清空记录
+                                </Button>
                             </div>
                         </div>
 
@@ -399,8 +424,9 @@ export default function Chat() {
                                     return (
                                         <div
                                             key={msg.id}
+                                            // ✅ 1. 关键：给最外层加上 'group'
                                             className={cn(
-                                                'flex gap-2.5',
+                                                'group flex gap-2.5 mb-2',
                                                 isMine ? 'flex-row-reverse' : 'flex-row'
                                             )}
                                         >
@@ -414,8 +440,8 @@ export default function Chat() {
                                                 )}
                                             </Avatar>
 
-                                            <div className={cn('max-w-[70%]', isMine && 'items-end')}>
-                                                {/* 发送者 + 时间 */}
+                                            <div className={cn('flex flex-col max-w-[70%]', isMine && 'items-end')}>
+                                                {/* 发送者 + 时间 + 撤回按钮 */}
                                                 <div className={cn(
                                                     'flex items-center gap-2 mb-1 text-xs text-muted-foreground',
                                                     isMine && 'flex-row-reverse'
@@ -423,10 +449,21 @@ export default function Chat() {
                                                     {!isMine && activeConv.type === 'group' && (
                                                         <span>{msg.senderName}</span>
                                                     )}
+
                                                     <span>{formatMessageTime(msg.createTime)}</span>
+
+                                                    {/* ✅ 2. 优化：把撤回按钮放进时间行，靠着时间显示 */}
+                                                    {isMine && msg.content !== '[消息已撤回]' && (
+                                                        <button
+                                                            onClick={() => deleteMessage(msg.id, activeConv.id)}
+                                                            className="opacity-0 group-hover:opacity-100 text-xs text-red-500 hover:underline transition-opacity duration-200 ml-2"
+                                                        >
+                                                            撤回
+                                                        </button>
+                                                    )}
                                                 </div>
 
-                                                {/* 消息内容 */}
+                                                {/* 消息内容 (不变) */}
                                                 {msg.contentType === 'text' && (
                                                     <div className={cn(
                                                         'inline-block px-3 py-2 rounded-lg text-sm break-all',

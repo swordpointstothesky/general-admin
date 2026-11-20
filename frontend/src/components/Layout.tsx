@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { KeepAlive } from 'keepalive-for-react';
+import { Link, useOutlet, useLocation, useNavigate } from 'react-router-dom';
 import api from '@/api';
 import {
     Sidebar,
@@ -55,7 +56,7 @@ function parseUserFromToken() {
 // ========== 主布局 ==========
 export default function Layout() {
     const { settings } = useSettings();
-
+    const outlet = useOutlet(); // 获取当前路由的组件
     const [menus, setMenus] = useState<MenuItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [avatar, setAvatar] = useState<string | null>(null);
@@ -72,7 +73,9 @@ export default function Layout() {
         const fetchMenus = async () => {
             try {
                 const response = await api.get('/api/menus/my');
-                setMenus(response.data);
+                const data = response.data;
+                const menuList = Array.isArray(data) ? data : data.menus || [];
+                setMenus(menuList);
             } catch (error) {
                 console.error('获取菜单失败:', error);
             } finally {
@@ -80,6 +83,12 @@ export default function Layout() {
             }
         };
         fetchMenus();
+
+        // ✅ 新增：监听子页面发出的刷新事件
+        window.addEventListener('refresh-menus', fetchMenus);
+        return () => {
+            window.removeEventListener('refresh-menus', fetchMenus);
+        };
     }, []);
 
     // ========== 获取头像 + 监听更新 ==========
@@ -325,7 +334,10 @@ export default function Layout() {
                         className="flex-1 overflow-hidden py-3"
                         style={{ backgroundColor: 'var(--content-bg)' }}
                     >
-                        <Outlet />
+                        {/* ✅ 使用 KeepAlive 包裹 */}
+                        <KeepAlive activeCacheKey={location.pathname} max={10}>
+                            {outlet}
+                        </KeepAlive>
                     </div>
                 </SidebarInset>
             </div>

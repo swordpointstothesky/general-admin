@@ -10,6 +10,7 @@ const THEME_MODES = [
 
 // 预设主题色
 const PRESET_COLORS = [
+    '#000000',  // 黑
     '#1d63b9',  // 蓝
     '#10b981',  // 绿
     '#8b5cf6',  // 紫

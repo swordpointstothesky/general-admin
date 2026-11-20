@@ -80,15 +80,24 @@ export function EntityFormDialog({
         return null;
     };
 
-    return (
+        return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg">
-                <DialogHeader>
+            {/* 
+              关键改动：
+              1. 使用 max-h-[90vh] 限制最高占屏幕 90%
+              2. 使用 p-0 去掉默认 padding，由内部元素各自控制
+              3. 使用 flex flex-col 让内容区分层级
+            */}
+            <DialogContent className="max-w-lg w-[95vw] sm:max-w-[500px] p-0 flex flex-col max-h-[90vh]">
+                
+                {/* 头部：固定不滚动 */}
+                <DialogHeader className="px-6 pt-6 pb-4 border-b">
                     <DialogTitle>{title}</DialogTitle>
                     {description && <DialogDescription>{description}</DialogDescription>}
                 </DialogHeader>
 
-                <div className="space-y-3 py-2">
+                {/* 表单内容区：唯一可滚动的区域 */}
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                     {fields.map((field) => (
                         <div key={field.key} className="space-y-1.5">
                             <Label htmlFor={`form-${field.key}`} className="text-sm">
@@ -177,13 +186,13 @@ export function EntityFormDialog({
                     ))}
                 </div>
 
-                <DialogFooter>
+                {/* 底部：固定不滚动 */}
+                <DialogFooter className="px-6 pb-6 pt-4 border-t">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         取消
                     </Button>
                     <Button
                         onClick={async () => {
-                            // ✅ 校验
                             const error = validate();
                             if (error) {
                                 toast.error(error);

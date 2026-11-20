@@ -22,7 +22,7 @@ import {
     ChevronRight,
     BookOpen,
     Bell,
-    MessageCircle 
+    MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +40,7 @@ const iconMap: Record<string, any> = {
     UserCog,
     BookOpen,
     Bell,
-    MessageCircle 
+    MessageCircle
 };
 
 interface MenuItem {
@@ -59,6 +59,10 @@ interface SidebarMenuTreeProps {
 
 export function SidebarMenuTree({ menus, onNavigate }: SidebarMenuTreeProps) {
     const location = useLocation();
+
+    if (!Array.isArray(menus)) {
+        return null;
+    }
 
     // 判断某个菜单是否处于"激活"状态（自身或子菜单匹配当前路径）
     const isMenuActive = (item: MenuItem): boolean => {

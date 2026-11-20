@@ -98,4 +98,11 @@ public class ChatController : ControllerBase
             .ToList();
         return Ok(result);
     }
+
+    [HttpDelete("conversations/{id}/messages")]
+    public async Task<IActionResult> ClearMessages(long id)
+    {
+        var ok = await _chatService.ClearMessagesAsync(id, GetUserId());
+        return ok ? NoContent() : NotFound();
+    }
 }

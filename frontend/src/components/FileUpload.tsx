@@ -72,7 +72,8 @@ export function FileUpload({
     };
 
     const handleClear = () => {
-        onChange?.(null);
+        //onChange?.(null);
+        onChange?.(''); 
     };
 
     const fullUrl = getFullUrl(value);
@@ -142,8 +143,8 @@ export function FileUpload({
                     )}
 
                     {/* 文件信息 */}
-                    <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">
+                    <div className="flex-1 min-w-0">   {/* ✅ 关键：必须有 min-w-0 */}
+                        <div className="text-sm font-medium truncate" title={value.split('/').pop()}>
                             {value.split('/').pop()}
                         </div>
                         <a

@@ -11,4 +11,6 @@ public class ConversationMember
 
     public long? LastReadMessageId { get; set; }
     public DateTime JoinTime { get; set; } = DateTime.UtcNow;
+
+    public long ClearedMessageId { get; set; } = 0;
 }

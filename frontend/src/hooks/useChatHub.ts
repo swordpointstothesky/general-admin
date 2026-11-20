@@ -19,6 +19,7 @@ interface UseChatHubOptions {
     onMessage?: (msg: ChatMessage) => void;
     onTyping?: (data: { conversationId: number; userId: number }) => void;
     onRead?: (data: { conversationId: number; userId: number; lastMessageId: number }) => void;
+    onMessageDeleted?: (messageId: number) => void;
 }
 
 export function useChatHub(options: UseChatHubOptions = {}) {
@@ -53,6 +54,11 @@ export function useChatHub(options: UseChatHubOptions = {}) {
 
         connection.on('UserRead', (data: any) => {
             optionsRef.current.onRead?.(data);
+        });
+
+        // 在 useEffect 内部：
+        connection.on('MessageDeleted', (messageId: number) => {
+            optionsRef.current.onMessageDeleted?.(messageId);
         });
 
         connection.onreconnected(() => setConnected(true));
@@ -105,5 +111,10 @@ export function useChatHub(options: UseChatHubOptions = {}) {
         } catch { /* 忽略 */ }
     };
 
-    return { connected, sendMessage, sendTyping, markRead, joinConversation };
+    // 暴露删除方法
+    const deleteMessage = async (messageId: number, conversationId: number) => {
+        await connectionRef.current?.invoke('DeleteMessage', messageId, conversationId);
+    };
+
+    return { connected, sendMessage, sendTyping, markRead, joinConversation, deleteMessage };
 }

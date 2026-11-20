@@ -160,12 +160,13 @@ public class ChatService : IChatService
     public async Task<MessagePageResponse> GetMessagesAsync(
         long conversationId, int userId, long? beforeId, int pageSize)
     {
-        var isMember = await _context.ConversationMembers
-            .AnyAsync(cm => cm.ConversationId == conversationId && cm.UserId == userId);
-        if (!isMember) throw new InvalidOperationException("无权访问该会话");
+        var member = await _context.ConversationMembers
+        .FirstOrDefaultAsync(cm => cm.ConversationId == conversationId && cm.UserId == userId);
+        if (member == null) throw new InvalidOperationException("无权访问该会话");
 
         var query = _context.Messages
-            .Where(m => m.ConversationId == conversationId && !m.IsDeleted);
+            .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
+            .Where(m => m.Id > member.ClearedMessageId); // ✅ 过滤掉被清空的消息
 
         if (beforeId.HasValue)
             query = query.Where(m => m.Id < beforeId.Value);
@@ -278,5 +279,22 @@ public class ChatService : IChatService
             .Where(cm => cm.UserId == userId)
             .Select(cm => cm.ConversationId)
             .ToListAsync();
+    }
+
+    public async Task<bool> ClearMessagesAsync(long conversationId, int userId)
+    {
+        var member = await _context.ConversationMembers
+            .FirstOrDefaultAsync(cm => cm.ConversationId == conversationId && cm.UserId == userId);
+
+        if (member == null) return false;
+
+        // 获取该会话当前的最大消息ID
+        var maxMessageId = await _context.Messages
+            .Where(m => m.ConversationId == conversationId)
+            .MaxAsync(m => (long?)m.Id) ?? 0;
+
+        member.ClearedMessageId = maxMessageId;
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

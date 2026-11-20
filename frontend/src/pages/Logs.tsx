@@ -1,16 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '@/api';
+import { DataTable } from '@/components/DataTable';
+import type { ColumnConfig } from '@/components/DataTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import {
     Dialog,
     DialogContent,
@@ -25,7 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Loader2, Eye } from 'lucide-react';
+import { Search, Loader2, Eye, RefreshCw } from 'lucide-react';
 
 // ========== 类型定义 ==========
 interface Log {
@@ -79,6 +73,9 @@ export default function Logs() {
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [filterExpanded, setFilterExpanded] = useState(false);
+    const [sortField, setSortField] = useState('createTime');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     // 筛选条件
     const [filters, setFilters] = useState({
@@ -95,18 +92,18 @@ export default function Logs() {
     const [detailOpen, setDetailOpen] = useState(false);
     const [selectedLog, setSelectedLog] = useState<Log | null>(null);
 
-    // ========== 获取日志列表 ==========
-    const fetchLogs = async () => {
+    const fetchLogs = async (nextFilters = filters) => {
         setLoading(true);
+        setError('');
         try {
             const params = new URLSearchParams();
-            if (filters.action) params.append('action', filters.action);
-            if (filters.module) params.append('module', filters.module);
-            if (filters.keyword) params.append('keyword', filters.keyword);
-            if (filters.startTime) params.append('startTime', filters.startTime);
-            if (filters.endTime) params.append('endTime', filters.endTime);
-            params.append('page', String(filters.page));
-            params.append('pageSize', String(filters.pageSize));
+            if (nextFilters.action) params.append('action', nextFilters.action);
+            if (nextFilters.module) params.append('module', nextFilters.module);
+            if (nextFilters.keyword) params.append('keyword', nextFilters.keyword);
+            if (nextFilters.startTime) params.append('startTime', nextFilters.startTime);
+            if (nextFilters.endTime) params.append('endTime', nextFilters.endTime);
+            params.append('page', String(nextFilters.page));
+            params.append('pageSize', String(nextFilters.pageSize));
 
             const response = await api.get(`/api/logs?${params.toString()}`);
             const data: LogPageResponse = response.data;
@@ -123,6 +120,85 @@ export default function Logs() {
         fetchLogs();
     }, [filters.page, filters.pageSize, filters.action, filters.module]);
 
+    const sortedLogs = useMemo(() => {
+        const list = [...logs];
+        list.sort((a, b) => {
+            const av = a[sortField as keyof Log] as string | number | undefined;
+            const bv = b[sortField as keyof Log] as string | number | undefined;
+
+            if (av == null && bv == null) return 0;
+            if (av == null) return 1;
+            if (bv == null) return -1;
+
+            if (typeof av === 'number' && typeof bv === 'number') {
+                return sortOrder === 'asc' ? av - bv : bv - av;
+            }
+
+            const as = String(av).toLowerCase();
+            const bs = String(bv).toLowerCase();
+            if (as < bs) return sortOrder === 'asc' ? -1 : 1;
+            if (as > bs) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return list;
+    }, [logs, sortField, sortOrder]);
+
+    const columns: ColumnConfig<Log>[] = [
+        { key: 'id', title: 'ID', width: '80px', sortable: true },
+        { key: 'username', title: '用户', sortable: true },
+        {
+            key: 'action',
+            title: '操作',
+            sortable: true,
+            render: (value) => (
+                <Badge className={actionColors[String(value)] || 'bg-gray-100 text-gray-700'}>
+                    {actionLabels[String(value)] || value}
+                </Badge>
+            ),
+        },
+        { key: 'module', title: '模块', sortable: true },
+        {
+            key: 'path',
+            title: '路径',
+            className: 'max-w-[220px]',
+            render: (value) => (
+                <span className="block max-w-[220px] truncate" title={String(value || '')}>
+                    {value || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'statusCode',
+            title: '状态',
+            sortable: true,
+            render: (value) => (
+                <span className={`font-medium ${value && Number(value) < 400 ? 'text-green-600' : 'text-red-600'}`}>
+                    {value || '-'}
+                </span>
+            ),
+        },
+        { key: 'executionTime', title: '耗时(ms)', sortable: true },
+        {
+            key: 'createTime',
+            title: '时间',
+            sortable: true,
+            render: (value) => (
+                <span className="text-sm text-muted-foreground">
+                    {value ? new Date(String(value)).toLocaleString('zh-CN') : '-'}
+                </span>
+            ),
+        },
+    ];
+
+    const tablePagination = {
+        page: filters.page,
+        pageSize: filters.pageSize,
+        total: totalCount,
+        onPageChange: (page: number, pageSize: number) => {
+            setFilters((prev) => ({ ...prev, page, pageSize }));
+        },
+    };
+
     // ========== 查看详情 ==========
     const handleViewDetail = async (id: number) => {
         try {
@@ -136,170 +212,158 @@ export default function Logs() {
 
     // ========== 搜索 ==========
     const handleSearch = () => {
-        setFilters({ ...filters, page: 1 });
-        fetchLogs();
+        const nextFilters = { ...filters, page: 1 };
+        setFilters(nextFilters);
+        fetchLogs(nextFilters);
     };
 
-    // ========== 分页 ==========
-    const totalPages = Math.ceil(totalCount / filters.pageSize);
+    const handleReset = () => {
+        const nextFilters = {
+            action: '',
+            module: '',
+            keyword: '',
+            startTime: '',
+            endTime: '',
+            page: 1,
+            pageSize: 20,
+        };
+        setFilters(nextFilters);
+        fetchLogs(nextFilters);
+    };
 
     return (
-        <div className="p-6 space-y-6">
-            {/* 页面标题 */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-800">操作日志</h1>
-                <p className="text-sm text-gray-500 mt-1">查看所有用户的操作记录</p>
-            </div>
-
-            {/* 筛选栏 */}
-            <div className="flex flex-wrap items-end gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="space-y-1">
-                    <Label className="text-sm">操作类型</Label>
-                    <Select
-                        value={filters.action}
-                        onValueChange={(value) => setFilters({ ...filters, action: value ?? '' })}
-                    >
-                        <SelectTrigger className="w-[140px]">
-                            <SelectValue placeholder="全部" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="">全部</SelectItem>
-                            <SelectItem value="CREATE">新增</SelectItem>
-                            <SelectItem value="UPDATE">更新</SelectItem>
-                            <SelectItem value="DELETE">删除</SelectItem>
-                            <SelectItem value="LOGIN">登录</SelectItem>
-                            <SelectItem value="VIEW">查询</SelectItem>
-                            <SelectItem value="ERROR">错误</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="space-y-1">
-                    <Label className="text-sm">关键词</Label>
-                    <Input
-                        placeholder="搜索用户名或操作内容..."
-                        value={filters.keyword}
-                        onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-                        className="w-[220px]"
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                </div>
-
-                <Button onClick={handleSearch} className="bg-emerald-500 hover:bg-emerald-600">
-                    <Search className="mr-2 h-4 w-4" />
-                    搜索
-                </Button>
-
-                <Button
-                    variant="outline"
-                    onClick={() => setFilters({ action: '', module: '', keyword: '', startTime: '', endTime: '', page: 1, pageSize: 20 })}
-                >
-                    重置
-                </Button>
-            </div>
-
-            {/* 表格 */}
-            {loading ? (
-                <div className="flex justify-center items-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
-                </div>
-            ) : error ? (
-                <div className="text-center py-20 text-red-500">{error}</div>
-            ) : (
-                <div className="border rounded-xl overflow-hidden">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-16">ID</TableHead>
-                                <TableHead>用户</TableHead>
-                                <TableHead>操作</TableHead>
-                                <TableHead>模块</TableHead>
-                                <TableHead>路径</TableHead>
-                                <TableHead>状态</TableHead>
-                                <TableHead>耗时(ms)</TableHead>
-                                <TableHead>时间</TableHead>
-                                <TableHead className="text-right">操作</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {logs.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={9} className="text-center text-gray-400 py-8">
-                                        暂无日志记录
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                logs.map((log) => (
-                                    <TableRow key={log.id}>
-                                        <TableCell>{log.id}</TableCell>
-                                        <TableCell className="font-medium">{log.username}</TableCell>
-                                        <TableCell>
-                                            <Badge className={actionColors[log.action] || 'bg-gray-100'}>
-                                                {actionLabels[log.action] || log.action}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{log.module}</TableCell>
-                                        <TableCell className="max-w-[150px] truncate" title={log.path}>
-                                            {log.path}
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className={`font-medium ${log.statusCode && log.statusCode < 400 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {log.statusCode || '-'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>{log.executionTime || '-'}</TableCell>
-                                        <TableCell className="text-sm text-gray-500">
-                                            {new Date(log.createTime).toLocaleString('zh-CN')}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleViewDetail(log.id)}
-                                                className="text-gray-500 hover:text-emerald-600"
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            )}
-
-            {/* 分页 */}
-            {totalCount > 0 && (
-                <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
-                        共 {totalCount} 条记录
-                    </span>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
-                            disabled={filters.page <= 1}
-                        >
-                            上一页
-                        </Button>
-                        <span className="flex items-center px-3 text-sm">
-                            {filters.page} / {totalPages || 1}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
-                            disabled={filters.page >= totalPages}
-                        >
-                            下一页
-                        </Button>
+        <div className="flex h-full flex-col gap-3">
+            <div className="rounded-lg border bg-background p-4 space-y-3">
+                <div className="flex flex-wrap items-end gap-3">
+                    <div className="relative w-64">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            value={filters.keyword}
+                            onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+                            placeholder="搜索用户名或操作内容..."
+                            className="h-10 pl-9"
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        />
                     </div>
-                </div>
-            )}
 
-            {/* ===== 查看详情弹窗 ===== */}
+                    <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">操作类型</Label>
+                        <Select
+                            value={filters.action}
+                            onValueChange={(value) => setFilters({ ...filters, action: value ?? '' })}
+                        >
+                            <SelectTrigger className="h-10 w-[140px]">
+                                <SelectValue placeholder="全部" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">全部</SelectItem>
+                                <SelectItem value="CREATE">新增</SelectItem>
+                                <SelectItem value="UPDATE">更新</SelectItem>
+                                <SelectItem value="DELETE">删除</SelectItem>
+                                <SelectItem value="LOGIN">登录</SelectItem>
+                                <SelectItem value="VIEW">查询</SelectItem>
+                                <SelectItem value="ERROR">错误</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button onClick={handleSearch} className="h-10">
+                        <Search className="mr-2 h-4 w-4" />
+                        查询
+                    </Button>
+
+                    <Button variant="outline" className="h-10" onClick={handleReset}>
+                        重置
+                    </Button>
+
+                    <button
+                        type="button"
+                        onClick={() => setFilterExpanded((prev) => !prev)}
+                        className="ml-auto h-10 px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                        {filterExpanded ? '收起' : '展开'} {filterExpanded ? '▲' : '▼'}
+                    </button>
+                </div>
+
+                {filterExpanded && (
+                    <div className="flex flex-wrap gap-4 border-t pt-3">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">模块</Label>
+                            <Input
+                                placeholder="请输入模块"
+                                value={filters.module || ''}
+                                onChange={(e) => setFilters({ ...filters, module: e.target.value })}
+                                className="h-10 w-40"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">开始时间</Label>
+                            <Input
+                                type="datetime-local"
+                                value={filters.startTime || ''}
+                                onChange={(e) => setFilters({ ...filters, startTime: e.target.value })}
+                                className="h-10 w-52"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">结束时间</Label>
+                            <Input
+                                type="datetime-local"
+                                value={filters.endTime || ''}
+                                onChange={(e) => setFilters({ ...filters, endTime: e.target.value })}
+                                className="h-10 w-52"
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex-1 overflow-hidden">
+                {error ? (
+                    <div className="flex h-full items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500">
+                        {error}
+                    </div>
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={sortedLogs}
+                        loading={loading}
+                        rowKey="id"
+                        showIndex
+                        indexOffset={(filters.page - 1) * filters.pageSize}
+                        sortField={sortField}
+                        sortOrder={sortOrder}
+                        onSortChange={(field, order) => {
+                            setSortField(field);
+                            setSortOrder(order);
+                        }}
+                        pagination={tablePagination}
+                        actions={(log) => (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewDetail(log.id)}
+                                className="text-muted-foreground hover:text-emerald-600"
+                            >
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                        )}
+                        actionsTitle="操作"
+                        toolbar={
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => fetchLogs()}
+                            >
+                                <RefreshCw className="mr-1.5 h-4 w-4" />
+                                刷新
+                            </Button>
+                        }
+                        emptyText="暂无日志记录"
+                    />
+                )}
+            </div>
+
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
@@ -311,14 +375,14 @@ export default function Logs() {
                                 <div><span className="text-gray-500">ID：</span>{selectedLog.id}</div>
                                 <div><span className="text-gray-500">用户：</span>{selectedLog.username}</div>
                                 <div><span className="text-gray-500">操作：</span>
-                                    <Badge className={actionColors[selectedLog.action]}>
+                                    <Badge className={actionColors[selectedLog.action] || 'bg-gray-100 text-gray-700'}>
                                         {actionLabels[selectedLog.action] || selectedLog.action}
                                     </Badge>
                                 </div>
                                 <div><span className="text-gray-500">模块：</span>{selectedLog.module}</div>
                                 <div><span className="text-gray-500">方法：</span>{selectedLog.method}</div>
                                 <div><span className="text-gray-500">状态码：</span>{selectedLog.statusCode || '-'}</div>
-                                <div><span className="text-gray-500">耗时：</span>{selectedLog.executionTime}ms</div>
+                                <div><span className="text-gray-500">耗时：</span>{selectedLog.executionTime || '-'}ms</div>
                                 <div><span className="text-gray-500">IP：</span>{selectedLog.clientIP || '-'}</div>
                                 <div className="col-span-2"><span className="text-gray-500">路径：</span>{selectedLog.path}</div>
                                 <div className="col-span-2"><span className="text-gray-500">时间：</span>
@@ -328,19 +392,19 @@ export default function Logs() {
                             {selectedLog.queryString && (
                                 <div>
                                     <div className="text-gray-500 font-medium">查询参数：</div>
-                                    <pre className="bg-gray-50 p-2 rounded text-xs overflow-x-auto max-h-24">{selectedLog.queryString}</pre>
+                                    <pre className="max-h-24 overflow-x-auto rounded bg-gray-50 p-2 text-xs">{selectedLog.queryString}</pre>
                                 </div>
                             )}
                             {selectedLog.requestBody && (
                                 <div>
                                     <div className="text-gray-500 font-medium">请求体：</div>
-                                    <pre className="bg-gray-50 p-2 rounded text-xs overflow-x-auto max-h-48">{selectedLog.requestBody}</pre>
+                                    <pre className="max-h-48 overflow-x-auto rounded bg-gray-50 p-2 text-xs">{selectedLog.requestBody}</pre>
                                 </div>
                             )}
                             {selectedLog.userAgent && (
                                 <div>
                                     <div className="text-gray-500 font-medium">User Agent：</div>
-                                    <div className="bg-gray-50 p-2 rounded text-xs break-all">{selectedLog.userAgent}</div>
+                                    <div className="rounded bg-gray-50 p-2 text-xs break-all">{selectedLog.userAgent}</div>
                                 </div>
                             )}
                         </div>
